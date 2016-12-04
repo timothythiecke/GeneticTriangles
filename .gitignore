@@ -27,3 +27,14 @@
 *.exe
 *.out
 *.app
+
+
+# Own additions
+*.dll
+*.sdf
+/Saved/
+Content/StarterContent/
+Intermediate/AssetRegistryCache/
+Intermediate/Build/
+Intermediate/ReimportCache
+Intermediate/CachedAssetRegistry.bin
