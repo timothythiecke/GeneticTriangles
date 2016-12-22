@@ -4,6 +4,7 @@
 #include "GeneticTrianglesController.h"
 
 #include "TriangleManager.h"
+#include "UpdatedTriangleManager.h"
 
 #include "EngineUtils.h"
 
@@ -36,6 +37,28 @@ void AGeneticTrianglesController::GASpaceBar()
 	// If there is a valid TriangleManager, start the algorithm
 	if (mTriangleManager != nullptr)
 		mTriangleManager->InitializePopulation();
+
+	if (mUpdatedTriangleManager == nullptr)
+	{
+		for (TActorIterator<AActor> actor_iterator(GetWorld()); actor_iterator; ++actor_iterator)
+		{
+			AUpdatedTriangleManager* ptr = Cast<AUpdatedTriangleManager>(*actor_iterator);
+
+			if (ptr != nullptr)
+			{
+				mUpdatedTriangleManager = ptr;
+				break;
+			}
+		}
+	}
+
+	if (mUpdatedTriangleManager != nullptr)
+	{
+		if (mUpdatedTriangleManager->HasGeneratedTriangles())
+			mUpdatedTriangleManager->RunGeneration();
+		else
+			mUpdatedTriangleManager->Initialize();
+	}
 }
 
 

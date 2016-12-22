@@ -7,6 +7,7 @@
 
 // Forward declaration
 class ATriangleManager;
+class AUpdatedTriangleManager;
 
 /**
  * 
@@ -52,4 +53,5 @@ protected:
 
 private:
 	ATriangleManager* mTriangleManager = nullptr;
+	AUpdatedTriangleManager* mUpdatedTriangleManager = nullptr;
 };

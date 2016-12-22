@@ -3,7 +3,7 @@
   <ItemGroup>
     <None Include="..\..\GeneticTriangles.uproject" />
     <Filter Include="Source">
-      <UniqueIdentifier>{5E883959-64B8-4B62-B809-2325E2D7D495}</UniqueIdentifier>
+      <UniqueIdentifier>{918235CD-5C84-49F8-B36D-B5B8AE10E2CD}</UniqueIdentifier>
     </Filter>
     <None Include="..\..\Source\GeneticTriangles.Target.cs">
       <Filter>Source</Filter>
@@ -12,7 +12,7 @@
       <Filter>Source</Filter>
     </None>
     <Filter Include="Config">
-      <UniqueIdentifier>{010AA0C6-A739-4441-B2A7-47509D25692B}</UniqueIdentifier>
+      <UniqueIdentifier>{5CB03401-0ED7-4522-B4A9-60731DA5E08C}</UniqueIdentifier>
     </Filter>
     <None Include="..\..\Config\DefaultEditor.ini">
       <Filter>Config</Filter>
@@ -23,9 +23,24 @@
     <None Include="..\..\Config\DefaultGame.ini">
       <Filter>Config</Filter>
     </None>
+    <None Include="..\..\Config\DefaultInput.ini">
+      <Filter>Config</Filter>
+    </None>
     <Filter Include="Source\GeneticTriangles">
-      <UniqueIdentifier>{E1440A39-CD0E-4C0C-92DD-E39C9800FB78}</UniqueIdentifier>
+      <UniqueIdentifier>{264E490C-4F67-4B6E-97EE-3E17DC526FE8}</UniqueIdentifier>
     </Filter>
+    <ClCompile Include="..\..\Source\GeneticTriangles\FloatGene.cpp">
+      <Filter>Source\GeneticTriangles</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\Source\GeneticTriangles\FloatGene.h">
+      <Filter>Source\GeneticTriangles</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\Source\GeneticTriangles\Gene.cpp">
+      <Filter>Source\GeneticTriangles</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\Source\GeneticTriangles\Gene.h">
+      <Filter>Source\GeneticTriangles</Filter>
+    </ClInclude>
     <None Include="..\..\Source\GeneticTriangles\GeneticTriangles.Build.cs">
       <Filter>Source\GeneticTriangles</Filter>
     </None>
@@ -35,50 +50,62 @@
     <ClInclude Include="..\..\Source\GeneticTriangles\GeneticTriangles.h">
       <Filter>Source\GeneticTriangles</Filter>
     </ClInclude>
+    <ClCompile Include="..\..\Source\GeneticTriangles\GeneticTrianglesController.cpp">
+      <Filter>Source\GeneticTriangles</Filter>
+    </ClCompile>
+    <ClInclude Include="..\..\Source\GeneticTriangles\GeneticTrianglesController.h">
+      <Filter>Source\GeneticTriangles</Filter>
+    </ClInclude>
     <ClCompile Include="..\..\Source\GeneticTriangles\GeneticTrianglesGameModeBase.cpp">
       <Filter>Source\GeneticTriangles</Filter>
     </ClCompile>
     <ClInclude Include="..\..\Source\GeneticTriangles\GeneticTrianglesGameModeBase.h">
       <Filter>Source\GeneticTriangles</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\Source\GeneticTriangles\TriangleManager.h">
+    <ClCompile Include="..\..\Source\GeneticTriangles\IGene.cpp">
       <Filter>Source\GeneticTriangles</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\GeneticTriangles\Triangle.h">
-      <Filter>Source\GeneticTriangles</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\GeneticTriangles\GeneticTrianglesController.h">
-      <Filter>Source\GeneticTriangles</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\GeneticTriangles\Gene.h">
-      <Filter>Source\GeneticTriangles</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\Source\GeneticTriangles\FloatGene.h">
-      <Filter>Source\GeneticTriangles</Filter>
-    </ClInclude>
+    </ClCompile>
     <ClInclude Include="..\..\Source\GeneticTriangles\IGene.h">
       <Filter>Source\GeneticTriangles</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\Source\GeneticTriangles\TriangleManager.cpp">
+    <ClCompile Include="..\..\Source\GeneticTriangles\Path.cpp">
       <Filter>Source\GeneticTriangles</Filter>
     </ClCompile>
+    <ClInclude Include="..\..\Source\GeneticTriangles\Path.h">
+      <Filter>Source\GeneticTriangles</Filter>
+    </ClInclude>
     <ClCompile Include="..\..\Source\GeneticTriangles\Triangle.cpp">
       <Filter>Source\GeneticTriangles</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\GeneticTriangles\GeneticTrianglesController.cpp">
+    <ClInclude Include="..\..\Source\GeneticTriangles\Triangle.h">
+      <Filter>Source\GeneticTriangles</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\Source\GeneticTriangles\TriangleManager.cpp">
       <Filter>Source\GeneticTriangles</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\GeneticTriangles\Gene.cpp">
+    <ClInclude Include="..\..\Source\GeneticTriangles\TriangleManager.h">
+      <Filter>Source\GeneticTriangles</Filter>
+    </ClInclude>
+    <ClCompile Include="..\..\Source\GeneticTriangles\UpdatedTriangleManager.cpp">
       <Filter>Source\GeneticTriangles</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\GeneticTriangles\FloatGene.cpp">
+    <ClInclude Include="..\..\Source\GeneticTriangles\UpdatedTriangleManager.h">
+      <Filter>Source\GeneticTriangles</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\Source\GeneticTriangles\PathManager.h">
+      <Filter>Source\GeneticTriangles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\Source\GeneticTriangles\Disposable.h">
+      <Filter>Source\GeneticTriangles</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\Source\GeneticTriangles\PathManager.cpp">
       <Filter>Source\GeneticTriangles</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\Source\GeneticTriangles\IGene.cpp">
+    <ClCompile Include="..\..\Source\GeneticTriangles\Disposable.cpp">
       <Filter>Source\GeneticTriangles</Filter>
     </ClCompile>
   </ItemGroup>

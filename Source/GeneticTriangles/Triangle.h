@@ -38,6 +38,8 @@ public:
 	void MutateChromosome(const int inPointIndex, const float inMaxMutationAxisOffset);
 
 	FVector mLocation;
+
+	//void Copy()
 private:
 	TArray<FVector> mPoints; ///< The points that will represent the triangle, these points are considered in relative space of the triangle actor
 	FColor			mColor;  ///< The color with which we will visualize the triangle in 3D space
