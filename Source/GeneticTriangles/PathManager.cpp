@@ -44,7 +44,7 @@ void APathManager::BeginPlay()
 
 		ensure(path != nullptr);
 
-		path->PostInit();
+		path->PostInit(MinAmountOfPointsPerPathAtStartup, MaxAmountOfPointsPerPathAtStartup);
 		path->RandomizeValues(Nodes[0], MaxInitialVariation);
 		path->DetermineGeneticRepresentation();
 
@@ -85,6 +85,8 @@ void APathManager::RunGeneration()
 	SelectionStep();
 	CrossoverStep();
 	MutationStep();
+	EvaluateFitness();
+	ColorCodePathsByFitness();
 
 	++GenerationCount;
 
@@ -345,6 +347,53 @@ void APathManager::CrossoverStep()
 
 				++successfull_crossover_amount;
 			}
+			else if (CrossoverOperator == ECrossoverOperator::Uniform)
+			{
+				APath* offspring_0 = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());;
+				APath* offspring_1 = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());;
+
+				int32 index = 0;
+				for (const FVector& ref : bigger_path->GetGeneticRepresentation())
+				{
+					if (index >= smallest_path->GetAmountOfNodes())
+					{
+						// Evaluate junk data
+						// Both offsrping have a shot of copying the junk data of the less fit parent
+						const float junk_chance = FMath::FRandRange(0.0f, 100.0f);
+						if (junk_chance < JunkDNACrossoverProbability)
+							offspring_0->AddChromosome(ref);
+
+						const float junk_chance_next = FMath::FRandRange(0.0f, 100.0f);
+						if (junk_chance_next < JunkDNACrossoverProbability)
+							offspring_1->AddChromosome(ref);
+					}
+					else
+					{
+						// Uniform does crossover per chromosome
+						const float bias = FMath::FRandRange(0.0f, 100.0f);
+						if (bias < 50.0f)
+						{
+							offspring_0->AddChromosome(smallest_path->GetChromosome(index));
+							offspring_1->AddChromosome(bigger_path->GetChromosome(index));
+						}
+						else
+						{
+							offspring_0->AddChromosome(bigger_path->GetChromosome(index));
+							offspring_1->AddChromosome(smallest_path->GetChromosome(index));
+						}
+					}
+
+					++index;
+				}
+
+				offspring_0->DetermineGeneticRepresentation();
+				offspring_1->DetermineGeneticRepresentation();
+
+				temp.Add(offspring_0);
+				temp.Add(offspring_1);
+
+				++successfull_crossover_amount;
+			}
 		}
 		else
 		{
@@ -412,3 +461,37 @@ void APathManager::Purge()
 	}
 }
 
+
+
+void APathManager::ColorCodePathsByFitness()
+{
+	float lowest_fitness = TNumericLimits<float>::Max();
+	float highest_fitness = 0.0f;
+
+	for (const APath* path : mPaths)
+	{
+		const float fitness = path->GetFitness();
+
+		if (fitness < lowest_fitness)
+			lowest_fitness = fitness;
+		if (fitness > highest_fitness)
+			highest_fitness = fitness;
+	}
+
+	for (int32 i = 0; i < mPaths.Num(); ++i)
+	{
+		const float fitness = mPaths[i]->GetFitness();
+		const float blend_value = (fitness - highest_fitness) / (lowest_fitness - highest_fitness);
+
+		FColor red = FColor::Red;
+		FColor green = FColor::Green;
+
+		FColor blended;
+		blended.A = 255;
+		blended.R = FMath::Lerp(red.R, green.R, blend_value * 255);
+		blended.G = FMath::Lerp(red.G, green.G, blend_value * 255);
+		blended.B = FMath::Lerp(red.B, green.B, blend_value * 255);
+
+		mPaths[i]->SetColorCode(blended);
+	}
+}

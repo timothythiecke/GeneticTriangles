@@ -49,9 +49,9 @@ void APath::Dispose()
 
 
 
-void APath::PostInit()
+void APath::PostInit(const int32 inMinAmountOfNodes, const int32 inMaxAmountOfNodes)
 {
-	const int32 amount_of_positions = 5 /*FMath::RandRange(2, 5)*/; // int32 may be fully used in the future
+	const int32 amount_of_positions = FMath::RandRange(inMinAmountOfNodes, inMaxAmountOfNodes);
 	
 	mGeneticRepresentation.Reserve(amount_of_positions);
 

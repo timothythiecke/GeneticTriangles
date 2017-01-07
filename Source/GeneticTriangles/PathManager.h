@@ -97,6 +97,7 @@ private:
 	void CrossoverStep();
 	void MutationStep();
 	void Purge();
+	void ColorCodePathsByFitness();
 
 private:
 	TArray<APath*> mPaths;

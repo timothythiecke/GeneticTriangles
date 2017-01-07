@@ -27,7 +27,7 @@ public:
 
 	virtual void Dispose();
 
-	virtual void PostInit();
+	virtual void PostInit(const int32 inMinAmountOfNodes = 0.0f, const int32 inMaxAmountOfNodes = 0.0f);
 	virtual void DetermineGeneticRepresentation();
 	void SetGeneticRepresentation(const TArray<FVector>& inGeneticRepresentation);
 
@@ -47,6 +47,8 @@ public:
 	FVector GetChromosome(const int32 inIndex) const;
 
 	void Mutate();
+
+	void SetColorCode(const FColor& color) { mColor = color; }
 
 public:
 	UPROPERTY(BlueprintReadWrite)
