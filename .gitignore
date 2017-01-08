@@ -38,3 +38,11 @@ Intermediate/AssetRegistryCache/
 Intermediate/Build/
 Intermediate/ReimportCache
 Intermediate/CachedAssetRegistry.bin
+
+*.suo
+*.pdb
+*.ipch
+*.VC.db
+GeneticTriangles.VC.VC.opendb
+GeneticTriangles.VC.db
+GeneticTriangles.VC.db

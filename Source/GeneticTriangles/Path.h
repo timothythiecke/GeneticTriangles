@@ -46,9 +46,14 @@ public:
 	void RemoveChromosome(const int32 inIndex);
 	FVector GetChromosome(const int32 inIndex) const;
 
-	void Mutate();
+	void MutateThroughTranslation(const bool inHeadBias, const bool inFullMutation, const float inMaxTranslationOffset);
+	void MutateThroughInsertion();
+	void MutateThroughDeletion();
 
-	void SetColorCode(const FColor& color) { mColor = color; }
+	void SetColorCode(const FColor& inColor) { mColor = inColor; }
+
+	void MarkIsInObstacle() { mIsInObstacle = true; mColor = FColor(128, 128, 128); }
+	bool GetIsInObstacle() const { return mIsInObstacle; }
 
 public:
 	UPROPERTY(BlueprintReadWrite)
@@ -60,4 +65,5 @@ private:
 	FColor mColor;
 	float mFitness;
 	float mLength;
+	bool mIsInObstacle;
 };

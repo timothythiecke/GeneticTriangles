@@ -14,12 +14,19 @@ APathManager::APathManager() :
 	MaxAmountOfPointsPerPathAtStartup(5),
 	TimeBetweenGenerations(1.0f),
 	CrossoverProbability(70.0f),
-	MutationProbability(5.0f),
 	mTimer(TimeBetweenGenerations),
 	AverageFitness(0.0f),
 	AmountOfNodesWeight(100.0f),
 	ProximityToTargetedNodeWeight(100.0f),
-	LengthWeight(100.0f)
+	LengthWeight(100.0f),
+	ObstacleHitMultiplier(1.0f),
+	AggregateSelectOne(false),
+	HeadBias(false),
+	FullMutation(false),
+	MutationProbability(5.0f),
+	TranslatePointProbability(33.333f),
+	InsertionProbability(33.333f),
+	DeletionProbability(33.333f)
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -160,6 +167,19 @@ void APathManager::EvaluateFitness()
 
 			if (path_length > longest_path_length)
 				longest_path_length = path_length;
+
+			// Do obstacle detection
+			// This may increase performance hit
+			const TArray<FVector>& genetic_representation = path->GetGeneticRepresentation();
+			for (int32 index = 1; index < genetic_representation.Num(); ++index)
+			{
+				if (GWorld != nullptr && genetic_representation.IsValidIndex(index) && genetic_representation.IsValidIndex(index - 1))
+				{
+					FHitResult hit_result;
+					if (GWorld->LineTraceSingleByChannel(hit_result, genetic_representation[index - 1], genetic_representation[index], ECollisionChannel::ECC_GameTraceChannel1))
+						path->MarkIsInObstacle();
+				}
+			}
 		}
 		else
 			UE_LOG(LogTemp, Warning, TEXT("APathManager::EvaluateFitness >> mPaths contains an invalid APath* at index %d"), i);
@@ -207,9 +227,15 @@ void APathManager::EvaluateFitness()
 				length_blend_value = (path->GetLength() - longest_path_length) / (shortest_path_length - longest_path_length);
 			}
 
-			const float final_fitness = (AmountOfNodesWeight * node_amount_blend_value) + 
+			// Should the path hit an obstacle, mark it unfit
+			float obstacle_multiplier = 1.0f;
+			if (path->GetIsInObstacle())
+				obstacle_multiplier = ObstacleHitMultiplier;
+
+			// Calculate final fitness based on the various weights and multipliers
+			const float final_fitness = ((AmountOfNodesWeight * node_amount_blend_value) + 
 										(ProximityToTargetedNodeWeight * proximity_blend_value) +
-										(LengthWeight * length_blend_value);
+										(LengthWeight * length_blend_value)) * obstacle_multiplier;
 
 			path->SetFitness(final_fitness);
 			
@@ -434,11 +460,40 @@ void APathManager::MutationStep()
 
 	for (APath* path : mPaths)
 	{
+		// Every path may be considered for mutation
 		const float rand = FMath::FRandRange(0.0f, 100.0f);
-
 		if (rand < MutationProbability)
 		{
-			path->Mutate();
+			// Determine which mutation occurs
+			EMutationType mutation_type{};
+			if (AggregateSelectOne)
+			{
+				const float aggregated_probability = TranslatePointProbability + InsertionProbability + DeletionProbability;
+				// @TODO:
+			}
+			else
+			{
+				const float translate_point_probability = FMath::FRandRange(0, 100.0f);
+				if (translate_point_probability < TranslatePointProbability)
+					mutation_type |= EMutationType::TranslatePoint;
+
+				const float insert_point_probability = FMath::FRandRange(0, 100.0f);
+				if (insert_point_probability < InsertionProbability)
+					mutation_type |= EMutationType::Insertion;
+
+				const float deletion_probability = FMath::FRandRange(0, 100.0f);
+				if (deletion_probability < DeletionProbability)
+					mutation_type |= EMutationType::Deletion;
+			}
+
+			// Do mutation in Path
+			if ((mutation_type & EMutationType::TranslatePoint) != 0)
+				path->MutateThroughTranslation(HeadBias, FullMutation, MaxTranslationOffset);
+			if ((mutation_type & EMutationType::Insertion) != 0)
+				path->MutateThroughInsertion();
+			if ((mutation_type & EMutationType::Deletion) != 0)
+				path->MutateThroughDeletion();
+
 			++successfull_mutations;
 		}
 	}
