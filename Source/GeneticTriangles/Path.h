@@ -10,13 +10,16 @@
 
 #include "Path.generated.h"
 
+// Forward declaration
+enum class ETranslationMutationType : uint8;
+
 UCLASS()
 class GENETICTRIANGLES_API APath : public AActor, public IDisposable
 {
 	GENERATED_BODY()
 	
 public:	
-	// Sets default values for this actor's properties
+	// Sets default values for this actors' properties
 	APath();
 
 	// Called when the game starts or when spawned
@@ -46,14 +49,28 @@ public:
 	void RemoveChromosome(const int32 inIndex);
 	FVector GetChromosome(const int32 inIndex) const;
 
-	void MutateThroughTranslation(const bool inHeadBias, const bool inFullMutation, const float inMaxTranslationOffset);
+	void MutateThroughTranslation(const ETranslationMutationType inTranslationMutationType, const float inMaxTranslationOffset);
 	void MutateThroughInsertion();
 	void MutateThroughDeletion();
 
 	void SetColorCode(const FColor& inColor) { mColor = inColor; }
 
-	void MarkIsInObstacle() { mIsInObstacle = true; mColor = FColor(128, 128, 128); }
+	void MarkIsInObstacle() { mIsInObstacle = true; }
 	bool GetIsInObstacle() const { return mIsInObstacle; }
+
+	void MarkCanSeeTarget() { mCanSeeTarget = true; }
+	bool GetCanSeeTarget() const { return mCanSeeTarget; }
+
+	void MarkHasReachedTarget() { mHasReachedTarget = true; }
+	bool GetHasReachedTarget() const { return mHasReachedTarget; }
+
+	void MarkSlopeTooIntense() { mSlopeTooIntense = true; }
+	bool GetSlopeTooIntense() const { return mSlopeTooIntense; }
+
+	void MarkTravelingThroughTerrain() { mTravelingThroughTerrain = true; }
+	bool GetTravelingThroughTerrain() const { return mTravelingThroughTerrain; }
+
+	void SnapToTerrain();
 
 public:
 	UPROPERTY(BlueprintReadWrite)
@@ -66,4 +83,8 @@ private:
 	float mFitness;
 	float mLength;
 	bool mIsInObstacle;
+	bool mCanSeeTarget;
+	bool mHasReachedTarget;
+	bool mSlopeTooIntense;
+	bool mTravelingThroughTerrain;
 };

@@ -1,9 +1,9 @@
 {
-	"Changelist" : 3241561,
+	"Changelist" : 3249277,
 	"CompatibleChangelist" : 3195953,
-	"BuildId" : "012468b6-b80b-4265-b1dc-1a64712f1e34",
+	"BuildId" : "8d0f51a6-424e-4043-bf5d-bede9c0f92c3",
 	"Modules" : 
 	{
-		"GeneticTriangles" : "UE4Editor-GeneticTriangles-3101.dll"
+		"GeneticTriangles" : "UE4Editor-GeneticTriangles-8901.dll"
 	}
 }

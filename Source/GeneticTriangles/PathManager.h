@@ -30,6 +30,20 @@ enum EMutationType
 };
 ENUM_CLASS_FLAGS(EMutationType)
 
+/**
+* AnyButStart: A random chromosome is selected (except the starting one) and is mutated
+* HeadOnly: The last chromosome in the genetic representation is mutated
+* HeadFalloff: The last chromosome in the genetic representation is mutated, the same mutation is applied with a linear falloff for each subsequent chromosome
+* AllAtOnce: All chromsomes (except the starting one) are mutated at the same time
+*/
+UENUM(BlueprintType)
+enum class ETranslationMutationType : uint8
+{
+	AnyButStart UMETA(DisplayName = "AnyButStart"),
+	HeadOnly UMETA(DisplayName = "HeadOnly"),
+	HeadFalloff UMETA(DisplayName = "HeadFalloff"),
+	AllAtOnce UMETA(DisplayName = "AllAtOnce")
+};
 
 UCLASS()
 class GENETICTRIANGLES_API APathManager : public AActor, public IDisposable
@@ -54,32 +68,36 @@ public:
 	UPROPERTY(BlueprintReadWrite, meta = (Tooltip = "The transform component of the path manager, to be exposed to the editor."))
 	USceneComponent* SceneComponent;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ToolTip = "The amount of creatures to spawn"))
-	int32 PopulationCount;
+	UPROPERTY(BlueprintReadOnly)
+	int32 GenerationCount;
+
+	UPROPERTY(BlueprintReadOnly)
+	float AverageFitness;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ToolTip = "Nodes A and B in the world"))
 	TArray<AActor*> Nodes;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	float MaxInitialVariation;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int32 MinAmountOfPointsPerPathAtStartup;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int32 MaxAmountOfPointsPerPathAtStartup;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	// Customization for user
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Customization", meta = (ToolTip = "The amount of seconds between each generation run"))
 	float TimeBetweenGenerations;
 
-	UPROPERTY(BlueprintReadOnly)
-	int32 GenerationCount;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Customization", meta = (ToolTip = "The color of paths that are marked invalid"))
+	FColor InvalidPathColor;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	float CrossoverProbability;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Customization", meta = (ToolTip = "The amount of creatures to spawn"))
+	int32 PopulationCount;
 
-	UPROPERTY(BlueprintReadOnly)
-	float AverageFitness;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Customization", meta = (ToolTip = "Maximum distance between each point of the paths in the first generation"))
+	float MaxInitialVariation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Customization", meta = (ToolTip = "The least amount of points in path in the first generation"))
+	int32 MinAmountOfPointsPerPathAtStartup;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Customization", meta = (ToolTip = "The maximum amount of points in path in the first generation"))
+	int32 MaxAmountOfPointsPerPathAtStartup;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Customization", meta = (ToolTip = ""))
+	float MaxSlopeToleranceAngle;
 
 	// Fitness weights
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Fitness Weights", meta = (ToolTip = "The less nodes a path has, the fitter it is"))
@@ -91,10 +109,28 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Fitness Weights", meta = (ToolTip = "Shorter paths are fitter than longer paths"))
 	float LengthWeight;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Fitness Weights", meta = (ToolTip = "If the path can see the target, then it is on the right track and thus fitter"))
+	float CanSeeTargetWeight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Fitness Weights", meta = (ToolTip = "When the target node has been reached, apply this fitness weight to the fitness calculation for a path"))
+	float TargetReachedWeight;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Fitness Weights", meta = (ToolTip = "If a path crosses an obstacle, then it is marked unfit. During fitness calculation, it will use this multiplier"))
 	float ObstacleHitMultiplier;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Fitness Weights", meta = (ToolTip = "If the slope of a path between its chromosomes is in between"))
+	float SlopeWeight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Fitness Weights", meta = (ToolTip = "If the slope of a path between two points is too large, the path will be marked unfit"))
+	float SlopeTooIntenseMultiplier;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Fitness Weights", meta = (ToolTip = "When the path travels through terrain, this multiplier kicks in"))
+	float PiercesTerrainMultiplier;
+
 	// Crossover
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossover", meta = (ToolTip = "The probability of a pair mating with each other, the pairs will reproduce asexually otherwise"))
+	float CrossoverProbability;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crossover", meta = (ToolTip = "Decides the crossover operator to use, which will hugely affect the way offspring are generated"))
 	ECrossoverOperator CrossoverOperator;
 
@@ -105,11 +141,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mutation", meta = (ToolTip = "Do roulette wheel selection for what kind of mutation will occur, otherwise consider every mutation a possibility"))
 	bool AggregateSelectOne;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mutation", meta = (ToolTip = "Apply bias to the final node"))
-	bool HeadBias;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mutation", meta = (ToolTip = "Will either offset one node or all nodes"))
-	bool FullMutation;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mutation", meta = (ToolTip = "Determines the way translation mutation is handled"))
+	ETranslationMutationType TranslationMutationType;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mutation")
 	float MutationProbability;
@@ -133,8 +166,24 @@ private:
 	void MutationStep();
 	void Purge();
 	void ColorCodePathsByFitness();
+	void LogGenerationInfo();
 
 private:
+	struct FGenerationInfo
+	{
+		int32 mGenerationNumber;
+		int32 mCrossoverAmount;
+		int32 mAmountOfTranslationMutations;
+		int32 mAmountOfInsertionMutations;
+		int32 mAmountOfDeletionMutations;
+		float mAverageFitness;
+		float mMaximumFitness;
+		float mFitnessFactor;
+		float mAverageAmountOfNodes;
+	};
+
+	FGenerationInfo mGenerationInfo;
+
 	TArray<APath*> mPaths;
 	TArray<APath*> mMatingPaths;
 	float mTimer;

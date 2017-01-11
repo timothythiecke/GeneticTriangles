@@ -19,10 +19,9 @@ APathManager::APathManager() :
 	AmountOfNodesWeight(100.0f),
 	ProximityToTargetedNodeWeight(100.0f),
 	LengthWeight(100.0f),
+	CanSeeTargetWeight(100.0f),
 	ObstacleHitMultiplier(1.0f),
 	AggregateSelectOne(false),
-	HeadBias(false),
-	FullMutation(false),
 	MutationProbability(5.0f),
 	TranslatePointProbability(33.333f),
 	InsertionProbability(33.333f),
@@ -85,29 +84,29 @@ void APathManager::Dispose()
 
 void APathManager::RunGeneration()
 {
-	if (GEngine != nullptr)
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("Starting run for generation ") + FString::FromInt(GenerationCount));
+	if (Nodes.IsValidIndex(0) && Nodes.IsValidIndex(1) && Nodes[0]->IsValidLowLevelFast() && Nodes[1]->IsValidLowLevelFast())
+	{
+		EvaluateFitness();
+		SelectionStep();
+		CrossoverStep();
+		MutationStep();
+		EvaluateFitness();
+		ColorCodePathsByFitness();
 
-	EvaluateFitness();
-	SelectionStep();
-	CrossoverStep();
-	MutationStep();
-	EvaluateFitness();
-	ColorCodePathsByFitness();
+		mGenerationInfo.mGenerationNumber = GenerationCount++;
 
-	++GenerationCount;
-
-	// Write empty line
-	if (GEngine != nullptr)
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT(""));
+		LogGenerationInfo();
+	}
+	else
+		UE_LOG(LogTemp, Warning, TEXT("APathManager::RunGeneration() >> One of the nodes is invalid!"));
 }
 
 
 void APathManager::EvaluateFitness()
 {
-	if (GEngine != nullptr)
+	/*if (GEngine != nullptr)
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Starting fitness evaluation..."));
-
+		*/
 	// What defines fitness for a path?
 	// 1. SHORTEST / CLOSEST
 	// -> Amount of chunks per path (less chunks == more fitness)
@@ -117,9 +116,9 @@ void APathManager::EvaluateFitness()
 
 	// Fitness is calculated as an agreation of multiple fitness values
 
-	// /////////////
-	// 1. CACHE DATA
-	// /////////////
+	// /////////////////////////
+	// 1. DATA AND STATE CACHING
+	// /////////////////////////
 	// Determine the least and most amount of nodes as this will influence the way fitness is calculated as well
 	int32 least_amount_of_nodes = INT32_MAX;
 	int32 most_amount_of_nodes = 0;
@@ -140,6 +139,15 @@ void APathManager::EvaluateFitness()
 		if (mPaths.IsValidIndex(i) && mPaths[i]->IsValidLowLevelFast())
 		{
 			path = mPaths[i];
+
+			if (path == nullptr && GEngine != nullptr)
+			{
+				GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::White, TEXT("Nullptr path in fitness evaluation!"));
+				continue;
+			}
+
+			// Force path to snap to terrain if possible
+			path->SnapToTerrain();
 
 			// Node amount calculation
 			const int32 node_amount = path->GetAmountOfNodes();
@@ -168,18 +176,58 @@ void APathManager::EvaluateFitness()
 			if (path_length > longest_path_length)
 				longest_path_length = path_length;
 
-			// Do obstacle detection
-			// This may increase performance hit
+			// Trace & slope handling
 			const TArray<FVector>& genetic_representation = path->GetGeneticRepresentation();
 			for (int32 index = 1; index < genetic_representation.Num(); ++index)
 			{
-				if (GWorld != nullptr && genetic_representation.IsValidIndex(index) && genetic_representation.IsValidIndex(index - 1))
+				if (GetWorld() != nullptr && genetic_representation.IsValidIndex(index) && genetic_representation.IsValidIndex(index - 1))
+				{
+					// Check for obstacles
+					FHitResult obstacle_hit_result;
+					if (GetWorld()->LineTraceSingleByChannel(obstacle_hit_result, genetic_representation[index - 1], genetic_representation[index], ECollisionChannel::ECC_GameTraceChannel1))
+						path->MarkIsInObstacle();
+
+					// Check for terrain traveling (hidden)
+					FHitResult terrain_hit_result;
+					if (GetWorld()->LineTraceSingleByChannel(terrain_hit_result, genetic_representation[index - 1], genetic_representation[index], ECollisionChannel::ECC_GameTraceChannel4))
+						path->MarkTravelingThroughTerrain();
+				}
+
+				// Check if the head is able to see the target node
+				if (GetWorld() != nullptr && genetic_representation.IsValidIndex(index) && index == genetic_representation.Num() - 1)
 				{
 					FHitResult hit_result;
-					if (GWorld->LineTraceSingleByChannel(hit_result, genetic_representation[index - 1], genetic_representation[index], ECollisionChannel::ECC_GameTraceChannel1))
-						path->MarkIsInObstacle();
+					if (!GetWorld()->LineTraceSingleByChannel(hit_result, genetic_representation[index], Nodes.IsValidIndex(1) ? Nodes[1]->GetActorLocation() : FVector::ZeroVector, ECollisionChannel::ECC_GameTraceChannel2))
+						path->MarkCanSeeTarget();
+				}
+
+				// Check if the slope between this node and the previous is inbetween the expected bounds
+				// Use dot product calculation between the vector between the two points and a vector with a constant Z
+				if (genetic_representation.IsValidIndex(i) && genetic_representation.IsValidIndex(i - 1))
+				{
+					FVector direction = genetic_representation[i] - genetic_representation[i - 1];
+					FVector collapsed_vector = direction;
+					collapsed_vector.Z = 0.0f;
+
+					direction.Normalize();
+					collapsed_vector.Normalize();
+					
+					const float dot_product = FVector::DotProduct(direction, collapsed_vector);
+					const float radians = FMath::Acos(dot_product);
+					const float degrees = FMath::RadiansToDegrees(radians);
+
+					// Check if radians are radians and degrees are degrees, as Acos doesn't specify what the return value is
+					// Check Kismet
+					// UE_LOG(LogTemp, Warning, TEXT("Radians: %f Degrees: %f"), radians, degrees);
+
+					if (degrees > MaxSlopeToleranceAngle)
+						path->MarkSlopeTooIntense();
 				}
 			}
+
+			// Check if the head is inside the node sphere
+			if ((Nodes[1]->GetActorLocation() - genetic_representation.Last()).Size() < 100.0f) // @TODO: Magic value
+				path->MarkHasReachedTarget();
 		}
 		else
 			UE_LOG(LogTemp, Warning, TEXT("APathManager::EvaluateFitness >> mPaths contains an invalid APath* at index %d"), i);
@@ -192,7 +240,7 @@ void APathManager::EvaluateFitness()
 	// 2. CALCULATE AND ASSIGN FITNESS
 	// ///////////////////////////////
 	mTotalFitness = 0.0f;
-	
+	int32 amount_of_nodes = 0;
 	for (int32 i = 0; i < mPaths.Num(); ++i)
 	{
 		APath* path = nullptr;
@@ -227,19 +275,46 @@ void APathManager::EvaluateFitness()
 				length_blend_value = (path->GetLength() - longest_path_length) / (shortest_path_length - longest_path_length);
 			}
 
+			// Determine if the path is able to see the target node
+			float can_see_target_fitness = 0.0f;
+			if (path->GetCanSeeTarget())
+				can_see_target_fitness = CanSeeTargetWeight;
+			
+			// Path has reached target, mark fit
+			float target_reached_fitness = 0.0f;
+			if (path->GetHasReachedTarget())
+				target_reached_fitness = TargetReachedWeight;
+
 			// Should the path hit an obstacle, mark it unfit
 			float obstacle_multiplier = 1.0f;
 			if (path->GetIsInObstacle())
 				obstacle_multiplier = ObstacleHitMultiplier;
 
+			// Slope too intense for the path to continue on, mark unfit
+			float slope_too_intense_multiplier = 1.0f;
+			if (path->GetSlopeTooIntense())
+				slope_too_intense_multiplier = SlopeTooIntenseMultiplier;
+
+			// Path traveling through terrain?
+			float traveling_through_terrain_multiplier = 1.0f;
+			if (path->GetTravelingThroughTerrain())
+				traveling_through_terrain_multiplier = PiercesTerrainMultiplier;
+
 			// Calculate final fitness based on the various weights and multipliers
 			const float final_fitness = ((AmountOfNodesWeight * node_amount_blend_value) + 
 										(ProximityToTargetedNodeWeight * proximity_blend_value) +
-										(LengthWeight * length_blend_value)) * obstacle_multiplier;
+										(LengthWeight * length_blend_value) +
+										can_see_target_fitness +
+										target_reached_fitness +
+										SlopeWeight) *
+										obstacle_multiplier * 
+										slope_too_intense_multiplier *
+										traveling_through_terrain_multiplier;
 
 			path->SetFitness(final_fitness);
 			
 			mTotalFitness += final_fitness;
+			amount_of_nodes += path->GetGeneticRepresentation().Num();
 		}
 		else
 			UE_LOG(LogTemp, Warning, TEXT("APathManager::EvaluateFitness >> mPaths contains an invalid APath* at index %d"), i);
@@ -247,6 +322,13 @@ void APathManager::EvaluateFitness()
 
 	AverageFitness = mTotalFitness / mPaths.Num();
 	
+	mGenerationInfo.mAverageFitness = AverageFitness;
+	mGenerationInfo.mAverageAmountOfNodes = amount_of_nodes / (float)mPaths.Num();
+	
+	const float max_fitness = AmountOfNodesWeight + ProximityToTargetedNodeWeight + LengthWeight + CanSeeTargetWeight + TargetReachedWeight + SlopeWeight;
+	mGenerationInfo.mMaximumFitness = max_fitness;
+	mGenerationInfo.mFitnessFactor = AverageFitness / max_fitness;
+		
 	// ////////////////////////////////////
 	// 3. SORT PATHS BY FITNESS, DESCENDING
 	// ////////////////////////////////////
@@ -260,9 +342,6 @@ void APathManager::EvaluateFitness()
 
 void APathManager::SelectionStep()
 {
-	if (GEngine != nullptr)
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Orange, TEXT("Starting selection step..."));
-
 	mMatingPaths.Empty();
 	mMatingPaths.Reserve(PopulationCount);
 
@@ -299,9 +378,6 @@ void APathManager::SelectionStep()
 
 void APathManager::CrossoverStep()
 {
-	if (GEngine != nullptr)
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Crossover step..."));
-
 	TArray<APath*> temp;
 	temp.Reserve(PopulationCount);
 
@@ -441,8 +517,10 @@ void APathManager::CrossoverStep()
 
 	mPaths = temp;
 
-	if (GEngine != nullptr)
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Amount of crossovers: ") +FString::FromInt(successfull_crossover_amount));
+	mGenerationInfo.mCrossoverAmount = successfull_crossover_amount;
+
+	/*if (GEngine != nullptr)
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Amount of crossovers: ") +FString::FromInt(successfull_crossover_amount));*/
 }
 
 
@@ -453,10 +531,12 @@ void APathManager::MutationStep()
 	// Insert a node
 	// Delete a node
 
-	if (GEngine != nullptr)
+	/*if (GEngine != nullptr)
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Orange, TEXT("Mutation step..."));
-
-	int32 successfull_mutations = 0;
+		*/
+	int32 successful_translation_mutations = 0;
+	int32 successful_insertion_mutations = 0;
+	int32 successful_deletion_mutations = 0;
 
 	for (APath* path : mPaths)
 	{
@@ -465,7 +545,12 @@ void APathManager::MutationStep()
 		if (rand < MutationProbability)
 		{
 			// Determine which mutation occurs
-			EMutationType mutation_type{};
+			//EMutationType mutation_type{};
+
+			bool do_translation_mutation = false;
+			bool do_insertion_mutation = false;
+			bool do_deletion_mutation = false;
+
 			if (AggregateSelectOne)
 			{
 				const float aggregated_probability = TranslatePointProbability + InsertionProbability + DeletionProbability;
@@ -475,31 +560,39 @@ void APathManager::MutationStep()
 			{
 				const float translate_point_probability = FMath::FRandRange(0, 100.0f);
 				if (translate_point_probability < TranslatePointProbability)
-					mutation_type |= EMutationType::TranslatePoint;
+					do_translation_mutation = true;
 
 				const float insert_point_probability = FMath::FRandRange(0, 100.0f);
 				if (insert_point_probability < InsertionProbability)
-					mutation_type |= EMutationType::Insertion;
+					do_insertion_mutation = true;
 
 				const float deletion_probability = FMath::FRandRange(0, 100.0f);
 				if (deletion_probability < DeletionProbability)
-					mutation_type |= EMutationType::Deletion;
+					do_deletion_mutation = true;
 			}
 
 			// Do mutation in Path
-			if ((mutation_type & EMutationType::TranslatePoint) != 0)
-				path->MutateThroughTranslation(HeadBias, FullMutation, MaxTranslationOffset);
-			if ((mutation_type & EMutationType::Insertion) != 0)
+			if (do_translation_mutation)
+			{
+				path->MutateThroughTranslation(TranslationMutationType, MaxTranslationOffset);
+				++successful_translation_mutations;
+			}	
+			if (do_insertion_mutation)
+			{
 				path->MutateThroughInsertion();
-			if ((mutation_type & EMutationType::Deletion) != 0)
+				++successful_insertion_mutations;
+			}
+			if (do_deletion_mutation)
+			{
 				path->MutateThroughDeletion();
-
-			++successfull_mutations;
+				++successful_deletion_mutations;
+			}
 		}
 	}
 
-	if (GEngine != nullptr)
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Orange, TEXT("Amount of mutations: ") + FString::FromInt(successfull_mutations));
+	mGenerationInfo.mAmountOfTranslationMutations = successful_translation_mutations;
+	mGenerationInfo.mAmountOfInsertionMutations = successful_insertion_mutations;
+	mGenerationInfo.mAmountOfDeletionMutations = successful_deletion_mutations;
 }
 
 
@@ -523,6 +616,8 @@ void APathManager::ColorCodePathsByFitness()
 	float lowest_fitness = TNumericLimits<float>::Max();
 	float highest_fitness = 0.0f;
 
+	// Cache lowest & highest fitness first
+	// @TODO: Do this in the loop of EvaluateFitness()
 	for (const APath* path : mPaths)
 	{
 		const float fitness = path->GetFitness();
@@ -533,20 +628,50 @@ void APathManager::ColorCodePathsByFitness()
 			highest_fitness = fitness;
 	}
 
-	for (int32 i = 0; i < mPaths.Num(); ++i)
+	for (APath* path : mPaths)
 	{
-		const float fitness = mPaths[i]->GetFitness();
-		const float blend_value = (fitness - highest_fitness) / (lowest_fitness - highest_fitness);
+		check(path != nullptr);
 
-		FColor red = FColor::Red;
-		FColor green = FColor::Green;
+		if (path->GetIsInObstacle() || path->GetSlopeTooIntense() || path->GetTravelingThroughTerrain()) 
+		{
+			// Completely unfit paths are marked grey
+			path->SetColorCode(InvalidPathColor);
+		}
+		else
+		{
+			// Apply color coding based on the lowest and highest fitness values
+			const float fitness = path->GetFitness();
+			const float blend_value = (fitness - highest_fitness) / (lowest_fitness - highest_fitness);
 
-		FColor blended;
-		blended.A = 255;
-		blended.R = FMath::Lerp(red.R, green.R, blend_value * 255);
-		blended.G = FMath::Lerp(red.G, green.G, blend_value * 255);
-		blended.B = FMath::Lerp(red.B, green.B, blend_value * 255);
+			FColor red = FColor::Red;
+			FColor green = FColor::Green;
 
-		mPaths[i]->SetColorCode(blended);
+			FColor blended;
+			blended.A = 255;
+			blended.R = FMath::Lerp(red.R, green.R, blend_value * 255);
+			blended.G = FMath::Lerp(red.G, green.G, blend_value * 255);
+			blended.B = FMath::Lerp(red.B, green.B, blend_value * 255);
+
+			path->SetColorCode(blended);
+		}
+	}
+}
+
+
+void APathManager::LogGenerationInfo()
+{
+	if (GEngine != nullptr)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Black, TEXT("\n\n"));
+
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("Average amount of nodes: ") + FString::SanitizeFloat(mGenerationInfo.mAverageAmountOfNodes));
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::White, TEXT("Fitness factor: ") + FString::SanitizeFloat(mGenerationInfo.mFitnessFactor));
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Cyan, TEXT("Maximum fitness: ") + FString::SanitizeFloat(mGenerationInfo.mMaximumFitness));
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::White, TEXT("Average fitness: ") + FString::SanitizeFloat(mGenerationInfo.mAverageFitness));
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Orange, TEXT("Amount of deletion mutations: ") + FString::FromInt(mGenerationInfo.mAmountOfDeletionMutations));
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Amount of insertion mutations: ") + FString::FromInt(mGenerationInfo.mAmountOfInsertionMutations));
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Orange, TEXT("Amount of translation mutations: ") + FString::FromInt(mGenerationInfo.mAmountOfTranslationMutations));
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Amount of reproducing crossovers: ") + FString::FromInt(mGenerationInfo.mCrossoverAmount));
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("Generation #") + FString::FromInt(mGenerationInfo.mGenerationNumber));
 	}
 }

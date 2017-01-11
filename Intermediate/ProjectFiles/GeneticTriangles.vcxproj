@@ -272,7 +272,9 @@
     <ClInclude Include="..\..\Source\GeneticTriangles\GeneticTriangles.h" />
     <ClCompile Include="..\..\Source\GeneticTriangles\GeneticTrianglesController.cpp" />
     <ClInclude Include="..\..\Source\GeneticTriangles\GeneticTrianglesController.h" />
+    <ClCompile Include="..\..\Source\GeneticTriangles\GeneticTrianglesFunctionLibrary.cpp" />
     <ClCompile Include="..\..\Source\GeneticTriangles\GeneticTrianglesGameModeBase.cpp" />
+    <ClInclude Include="..\..\Source\GeneticTriangles\GeneticTrianglesFunctionLibrary.h" />
     <ClInclude Include="..\..\Source\GeneticTriangles\GeneticTrianglesGameModeBase.h" />
     <ClCompile Include="..\..\Source\GeneticTriangles\IGene.cpp" />
     <ClInclude Include="..\..\Source\GeneticTriangles\IGene.h" />
