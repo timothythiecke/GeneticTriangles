@@ -8,7 +8,10 @@
 // Sets default values
 APath::APath() :
 	SceneComponent(nullptr),
+	mFitness(0.0f),
 	mLength(0.0f),
+	mAmountOfNodesFitness(0.0f),
+	mObstacleHitMultiplierChunk(0.0f),
 	mIsInObstacle(false),
 	mCanSeeTarget(false),
 	mHasReachedTarget(false),
@@ -143,7 +146,8 @@ void APath::InsertChromosome(const FVector& inChromosome, const int32 inIndex)
 
 void APath::RemoveChromosome(const int32 inIndex)
 {
-	mGeneticRepresentation.RemoveAt(inIndex);
+	if (mGeneticRepresentation.IsValidIndex(inIndex))
+		mGeneticRepresentation.RemoveAt(inIndex);
 }
 
 
@@ -192,14 +196,14 @@ void APath::MutateThroughTranslation(const ETranslationMutationType inTranslatio
 
 /**
 * Inserts a point / chromosome in the genetic representation
-* Insertion should happen between the starting and final node
+* Insertion happens anywhere after the first chromosome
 * The chromosome that gets added will be in the middle of the the element before inserting and the previous
 */
 void APath::MutateThroughInsertion()
 {
 	if (mGeneticRepresentation.Num() >= 2)
 	{
-		const uint32 insertion_index = FMath::RandRange(1, mGeneticRepresentation.Num() - 2);
+		const uint32 insertion_index = FMath::RandRange(1, mGeneticRepresentation.Num() - 1);
 		if (mGeneticRepresentation.IsValidIndex(insertion_index) && mGeneticRepresentation.IsValidIndex(insertion_index - 1))
 		{
 			FVector mid_point = (mGeneticRepresentation[insertion_index] + mGeneticRepresentation[insertion_index - 1]) / 2.0f;
@@ -212,15 +216,14 @@ void APath::MutateThroughInsertion()
 
 /**
 * Removes a point / chromosome from the genetic representation
-* Removal happens between the starting and final node
+* Removal happens anywhere after the first chromosome, which means the head may be killed off
 */
 void APath::MutateThroughDeletion()
 {
 	if (mGeneticRepresentation.Num() > 2)
 	{
-		const uint32 deletion_index = FMath::RandRange(1, mGeneticRepresentation.Num() - 2);
-		if (mGeneticRepresentation.IsValidIndex(deletion_index))
-			mGeneticRepresentation.RemoveAt(deletion_index);
+		const uint32 deletion_index = FMath::RandRange(1, mGeneticRepresentation.Num() - 1);
+		RemoveChromosome(deletion_index);
 	}
 }
 

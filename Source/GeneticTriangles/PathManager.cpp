@@ -25,7 +25,8 @@ APathManager::APathManager() :
 	MutationProbability(5.0f),
 	TranslatePointProbability(33.333f),
 	InsertionProbability(33.333f),
-	DeletionProbability(33.333f)
+	DeletionProbability(33.333f),
+	ObstacleAvoidanceBaseFitnessMultiplier(1.0f)
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -223,6 +224,35 @@ void APathManager::EvaluateFitness()
 					if (degrees > MaxSlopeToleranceAngle)
 						path->MarkSlopeTooIntense();
 				}
+
+				// Obstacle avoidance
+				if (ApplyObstacleAvoidance)
+				{
+					if (GetWorld() != nullptr && genetic_representation.IsValidIndex(i))
+					{
+						TArray<FVector> trace_ends;
+						trace_ends.Reserve(8);
+
+						trace_ends.Add(FVector(1.0f, 0.0f, 0.0f) * TraceDistance); // East
+						trace_ends.Add(FVector(1.0f, -1.0f, 0.0f) * TraceDistance); // South-East
+						trace_ends.Add(FVector(0.0f, -1.0f, 0.0f) * TraceDistance); // South
+						trace_ends.Add(FVector(-1.0f, -1.0f, 0.0f) * TraceDistance); // South-West
+						trace_ends.Add(FVector(-1.0f, 0.0f, 0.0f) * TraceDistance); // West
+						trace_ends.Add(FVector(-1.0f, 1.0f, 0.0f) * TraceDistance); // North-West
+						trace_ends.Add(FVector(0.0f, 1.0f, 0.0f) * TraceDistance); // North
+						trace_ends.Add(FVector(1.0f, 1.0f, 0.0f) * TraceDistance); // North-East
+
+						FVector start = genetic_representation[i];
+						for (const FVector& end : trace_ends)
+						{
+							FHitResult hit_result;
+							if (GetWorld()->LineTraceSingleByChannel(hit_result, start, start + end, ECollisionChannel::ECC_GameTraceChannel1))
+								path->AddObstacleHitMultiplierChunk(0.125f);
+
+							DrawDebugPoint(GetWorld(), start + end, 10, FColor::Cyan);
+						}
+					}
+				}
 			}
 
 			// Check if the head is inside the node sphere
@@ -241,6 +271,7 @@ void APathManager::EvaluateFitness()
 	// ///////////////////////////////
 	mTotalFitness = 0.0f;
 	int32 amount_of_nodes = 0;
+	int32 offenders = 0;
 	for (int32 i = 0; i < mPaths.Num(); ++i)
 	{
 		APath* path = nullptr;
@@ -300,18 +331,47 @@ void APathManager::EvaluateFitness()
 			if (path->GetTravelingThroughTerrain())
 				traveling_through_terrain_multiplier = PiercesTerrainMultiplier;
 
+			// Obstacle avoidance?
+			float obstacle_avoidance_multiplier = 1.0f;
+			float obstacle_avoidance_weight = ObstacleAvoidanceWeight;
+			if (ApplyObstacleAvoidance)
+			{
+				/*if (path->GetAmountOfNodes() > 1)
+				{
+					obstacle_avoidance_multiplier = ObstacleAvoidanceBaseFitnessMultiplier - (path->GetObstacleHitMultiplierChunk() / (float)(path->GetAmountOfNodes() - 1));
+
+					obstacle_avoidance_weight *= obstacle_avoidance_multiplier;
+
+					if (obstacle_avoidance_multiplier != 1.0f)
+						GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::White, FString::SanitizeFloat(obstacle_avoidance_multiplier));
+				}*/
+
+				if (path->GetObstacleHitMultiplierChunk() > 0.0f)
+				{
+					obstacle_avoidance_multiplier = 0.0f;
+					obstacle_avoidance_weight = 0.0f;
+					++offenders;
+				}
+			}
+			else
+			{
+				obstacle_avoidance_weight = 0.0f;
+			}
+
+
 			// Calculate final fitness based on the various weights and multipliers
 			const float final_fitness = ((AmountOfNodesWeight * node_amount_blend_value) + 
 										(ProximityToTargetedNodeWeight * proximity_blend_value) +
 										(LengthWeight * length_blend_value) +
 										can_see_target_fitness +
 										target_reached_fitness +
-										SlopeWeight) *
+										SlopeWeight +
+										obstacle_avoidance_weight) *
 										obstacle_multiplier * 
 										slope_too_intense_multiplier *
 										traveling_through_terrain_multiplier;
 
-			path->SetFitness(final_fitness);
+			path->SetFitnessValues(final_fitness, AmountOfNodesWeight * node_amount_blend_value);
 			
 			mTotalFitness += final_fitness;
 			amount_of_nodes += path->GetGeneticRepresentation().Num();
@@ -319,6 +379,8 @@ void APathManager::EvaluateFitness()
 		else
 			UE_LOG(LogTemp, Warning, TEXT("APathManager::EvaluateFitness >> mPaths contains an invalid APath* at index %d"), i);
 	}
+
+	//UE_LOG(LogTemp, Warning, TEXT("Offenders: %d"), offenders);
 
 	AverageFitness = mTotalFitness / mPaths.Num();
 	
@@ -383,124 +445,146 @@ void APathManager::CrossoverStep()
 
 	int32 successfull_crossover_amount = 0;
 
+	// Loop over the paths and try to apply crossover
 	for (int32 i = 0; i < mMatingPaths.Num(); i += 2)
 	{
 		const float R = FMath::FRandRange(0.0f, 100.0f);
 
+		// Crossover for a pair happens if crossover probability is met
 		if (R >= (100.0f - CrossoverProbability))
 		{
 			const APath* current_path = mMatingPaths[i];
 			const APath* next_path = mMatingPaths[i + 1];
-			const APath* smallest_path = current_path;
-			const APath* bigger_path = next_path;
-
-			// Compare the two paths based on their node amount
-			// Operator < might be better for this
-			if (current_path->GetAmountOfNodes() > next_path->GetAmountOfNodes())
+			const APath* smallest_path = nullptr;
+			const APath* bigger_path = nullptr;
+			
+			if (current_path->GetAmountOfNodes() < next_path->GetAmountOfNodes())
+			{
+				smallest_path = current_path;
+				bigger_path = next_path;
+			}
+			else
 			{
 				smallest_path = next_path;
 				bigger_path = current_path;
 			}
 
-			// Code below can be put in a switch
+			const int32 num_chromosomes_small = smallest_path->GetAmountOfNodes();
+			const int32 num_chromosomes_big = bigger_path->GetAmountOfNodes();
+
+			const bool variadic_length = current_path->GetAmountOfNodes() != next_path->GetAmountOfNodes();
+
+			APath* offspring_0 = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());;
+			APath* offspring_1 = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());;
+
+			// Do crossover operation depending on selected operator
 			if (CrossoverOperator == ECrossoverOperator::SinglePoint)
 			{
-				const int crossover_point = FMath::RandRange(0, smallest_path->GetAmountOfNodes());
-				APath* offspring_0 = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());;
-				APath* offspring_1 = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());;
-
-				int32 index = 0;
-				for (const FVector& ref : bigger_path->GetGeneticRepresentation())
+				const int32 crossover_index = FMath::RandRange(1, smallest_path->GetAmountOfNodes() - 1);
+				for (int32 j = 0; j < num_chromosomes_big; ++j)
 				{
-					// Junk data evaluation
-					if (index >= smallest_path->GetAmountOfNodes())
+					if (j < num_chromosomes_small)
 					{
-						const float appending_chance = FMath::RandRange(0.0f, 100.0f);
-
-						if (appending_chance < JunkDNACrossoverProbability)
-							offspring_0->AddChromosome(bigger_path->GetChromosome(index));
-
-						const float appending_chance_next = FMath::RandRange(0.0f, 100.0f);
-						if (appending_chance_next < JunkDNACrossoverProbability)
-							offspring_1->AddChromosome(bigger_path->GetChromosome(index));
-					}
-					else
-					{
-						if (index < crossover_point)
+						// Do regular crossover when indices are valid
+						if (j < crossover_index)
 						{
-							offspring_0->AddChromosome(smallest_path->GetChromosome(index));
-							offspring_1->AddChromosome(bigger_path->GetChromosome(index));
+							offspring_0->AddChromosome(smallest_path->GetChromosome(j));
+							offspring_1->AddChromosome(bigger_path->GetChromosome(j));
 						}
 						else
 						{
-							offspring_0->AddChromosome(bigger_path->GetChromosome(index));
-							offspring_1->AddChromosome(smallest_path->GetChromosome(index));
+							offspring_0->AddChromosome(bigger_path->GetChromosome(j));
+							offspring_1->AddChromosome(smallest_path->GetChromosome(j));
 						}
 					}
-
-					++index;
+					else
+					{
+						// Append the rest of the chromosomes to the children when
+						// The bigger path is more fit than the smaller one
+						// Only interesting if we remove part of the fitness calculation
+						if ((smallest_path->GetFitness() - smallest_path->GetAmountOfNodesFitness()) < (bigger_path->GetFitness() - bigger_path->GetAmountOfNodesFitness()))
+						{
+							offspring_0->AddChromosome(bigger_path->GetChromosome(j));
+							offspring_1->AddChromosome(bigger_path->GetChromosome(j));
+						}
+					}
 				}
+			}
+			else if (CrossoverOperator == ECrossoverOperator::DoublePoint)
+			{
+				const int32 first_crossover_index = FMath::FRandRange(1, smallest_path->GetAmountOfNodes() - 1);
+				const int32 second_crossover_index = FMath::FRandRange(first_crossover_index + 1, smallest_path->GetAmountOfNodes() - 1);
 
-				offspring_0->DetermineGeneticRepresentation();
-				offspring_1->DetermineGeneticRepresentation();
-
-				temp.Add(offspring_0);
-				temp.Add(offspring_1);
-
-				++successfull_crossover_amount;
+				for (int32 j = 0; j < num_chromosomes_big; ++j)
+				{
+					if (j < num_chromosomes_small)
+					{
+						// Do double point crossover when indices are valid
+						if (j < first_crossover_index)
+						{
+							offspring_0->AddChromosome(smallest_path->GetChromosome(j));
+							offspring_1->AddChromosome(bigger_path->GetChromosome(j));
+						}
+						else if (j >= first_crossover_index && j < second_crossover_index)
+						{
+							offspring_0->AddChromosome(bigger_path->GetChromosome(j));
+							offspring_1->AddChromosome(smallest_path->GetChromosome(j));
+						}
+						else if (j >= second_crossover_index)
+						{
+							offspring_0->AddChromosome(smallest_path->GetChromosome(j));
+							offspring_1->AddChromosome(bigger_path->GetChromosome(j));
+						}
+					}
+					else
+					{
+						if ((smallest_path->GetFitness() - smallest_path->GetAmountOfNodesFitness()) < (bigger_path->GetFitness() - bigger_path->GetAmountOfNodesFitness()))
+						{
+							offspring_0->AddChromosome(bigger_path->GetChromosome(j));
+							offspring_1->AddChromosome(bigger_path->GetChromosome(j));
+						}
+					}
+				}
 			}
 			else if (CrossoverOperator == ECrossoverOperator::Uniform)
 			{
-				APath* offspring_0 = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());;
-				APath* offspring_1 = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());;
-
-				int32 index = 0;
-				for (const FVector& ref : bigger_path->GetGeneticRepresentation())
+				for (int32 j = 0; j < num_chromosomes_big; ++j)
 				{
-					if (index >= smallest_path->GetAmountOfNodes())
+					if (j < num_chromosomes_small)
 					{
-						// Evaluate junk data
-						// Both offsrping have a shot of copying the junk data of the less fit parent
-						const float junk_chance = FMath::FRandRange(0.0f, 100.0f);
-						if (junk_chance < JunkDNACrossoverProbability)
-							offspring_0->AddChromosome(ref);
-
-						const float junk_chance_next = FMath::FRandRange(0.0f, 100.0f);
-						if (junk_chance_next < JunkDNACrossoverProbability)
-							offspring_1->AddChromosome(ref);
-					}
-					else
-					{
-						// Uniform does crossover per chromosome
 						const float bias = FMath::FRandRange(0.0f, 100.0f);
 						if (bias < 50.0f)
 						{
-							offspring_0->AddChromosome(smallest_path->GetChromosome(index));
-							offspring_1->AddChromosome(bigger_path->GetChromosome(index));
+							offspring_0->AddChromosome(smallest_path->GetChromosome(j));
+							offspring_1->AddChromosome(bigger_path->GetChromosome(j));
 						}
 						else
 						{
-							offspring_0->AddChromosome(bigger_path->GetChromosome(index));
-							offspring_1->AddChromosome(smallest_path->GetChromosome(index));
+							offspring_0->AddChromosome(bigger_path->GetChromosome(j));
+							offspring_1->AddChromosome(smallest_path->GetChromosome(j));
 						}
 					}
-
-					++index;
+					else 
+					{
+						if ((smallest_path->GetFitness() - smallest_path->GetAmountOfNodesFitness()) < (bigger_path->GetFitness() - bigger_path->GetAmountOfNodesFitness()))
+						{
+							offspring_0->AddChromosome(bigger_path->GetChromosome(j));
+							offspring_1->AddChromosome(bigger_path->GetChromosome(j));
+						}
+					}
 				}
-
-				offspring_0->DetermineGeneticRepresentation();
-				offspring_1->DetermineGeneticRepresentation();
-
-				temp.Add(offspring_0);
-				temp.Add(offspring_1);
-
-				++successfull_crossover_amount;
 			}
+
+			offspring_0->DetermineGeneticRepresentation();
+			offspring_1->DetermineGeneticRepresentation();
+
+			temp.Add(offspring_0);
+			temp.Add(offspring_1);
+
+			++successfull_crossover_amount;
 		}
-		else
+		else // otherwise they are carried / copied over to the next generation
 		{
-			// Unable to crossover
-			// Parents are duplicated to the next generation
 			APath* duplicate_0 = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());
 			duplicate_0->SetGeneticRepresentation(mMatingPaths[i]->GetGeneticRepresentation());
 			duplicate_0->DetermineGeneticRepresentation();
@@ -513,27 +597,17 @@ void APathManager::CrossoverStep()
 		}
 	}
 
-	Purge();
+	Purge(); // Get rid of the old paths
 
-	mPaths = temp;
+	mPaths = temp; // Keep track of the new paths
 
 	mGenerationInfo.mCrossoverAmount = successfull_crossover_amount;
-
-	/*if (GEngine != nullptr)
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Amount of crossovers: ") +FString::FromInt(successfull_crossover_amount));*/
 }
 
 
 void APathManager::MutationStep()
 {
-	// Mutate a node
-	// Mutate multiple nodes
-	// Insert a node
-	// Delete a node
-
-	/*if (GEngine != nullptr)
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Orange, TEXT("Mutation step..."));
-		*/
+	// Keep track of the mutation amount this generation
 	int32 successful_translation_mutations = 0;
 	int32 successful_insertion_mutations = 0;
 	int32 successful_deletion_mutations = 0;
@@ -544,34 +618,28 @@ void APathManager::MutationStep()
 		const float rand = FMath::FRandRange(0.0f, 100.0f);
 		if (rand < MutationProbability)
 		{
-			// Determine which mutation occurs
-			//EMutationType mutation_type{};
-
+			// Determine which mutations occur
 			bool do_translation_mutation = false;
 			bool do_insertion_mutation = false;
 			bool do_deletion_mutation = false;
 
-			if (AggregateSelectOne)
-			{
-				const float aggregated_probability = TranslatePointProbability + InsertionProbability + DeletionProbability;
-				// @TODO:
-			}
-			else
-			{
-				const float translate_point_probability = FMath::FRandRange(0, 100.0f);
-				if (translate_point_probability < TranslatePointProbability)
-					do_translation_mutation = true;
+			const float translate_point_probability = FMath::FRandRange(0, 100.0f);
+			if (translate_point_probability < TranslatePointProbability)
+				do_translation_mutation = true;
 
-				const float insert_point_probability = FMath::FRandRange(0, 100.0f);
-				if (insert_point_probability < InsertionProbability)
-					do_insertion_mutation = true;
+			const float insert_point_probability = FMath::FRandRange(0, 100.0f);
+			if (insert_point_probability < InsertionProbability)
+				do_insertion_mutation = true;
 
+			// Only do insertion or deletion in the same mutation step
+			if (!do_insertion_mutation)
+			{
 				const float deletion_probability = FMath::FRandRange(0, 100.0f);
 				if (deletion_probability < DeletionProbability)
 					do_deletion_mutation = true;
 			}
 
-			// Do mutation in Path
+			// Then do mutations
 			if (do_translation_mutation)
 			{
 				path->MutateThroughTranslation(TranslationMutationType, MaxTranslationOffset);
@@ -590,6 +658,7 @@ void APathManager::MutationStep()
 		}
 	}
 
+	// Keep track of the mutation amount
 	mGenerationInfo.mAmountOfTranslationMutations = successful_translation_mutations;
 	mGenerationInfo.mAmountOfInsertionMutations = successful_insertion_mutations;
 	mGenerationInfo.mAmountOfDeletionMutations = successful_deletion_mutations;

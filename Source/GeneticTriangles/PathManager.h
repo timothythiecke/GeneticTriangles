@@ -159,6 +159,20 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mutation", meta = (ToolTip = "Max offset during translation mutation"))
 	float MaxTranslationOffset;
 
+	// Obstacle avoidance
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ObstacleAvoidance")
+	bool ApplyObstacleAvoidance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ObstacleAvoidance")
+	float TraceDistance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ObstacleAvoidance")
+	float ObstacleAvoidanceBaseFitnessMultiplier;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ObstacleAvoidance")
+	float ObstacleAvoidanceWeight;
+
+
 private:
 	void EvaluateFitness();
 	void SelectionStep();

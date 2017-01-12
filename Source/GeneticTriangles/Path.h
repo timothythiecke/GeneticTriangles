@@ -36,7 +36,7 @@ public:
 
 	void RandomizeValues(const AActor* inStartingNode, const float inMaxVariation);
 
-	void SetFitness(const float inFitness) { mFitness = inFitness; }
+	void SetFitnessValues(const float inFitness, const float inNodesFitness) { mFitness = inFitness; mAmountOfNodesFitness = inNodesFitness; }
 	float GetFitness() const { return mFitness; }
 
 	float GetLength() const { return mLength; }
@@ -70,7 +70,12 @@ public:
 	void MarkTravelingThroughTerrain() { mTravelingThroughTerrain = true; }
 	bool GetTravelingThroughTerrain() const { return mTravelingThroughTerrain; }
 
+	float GetAmountOfNodesFitness() const { return mAmountOfNodesFitness; }
+
 	void SnapToTerrain();
+
+	void AddObstacleHitMultiplierChunk(const float inChunk) { mObstacleHitMultiplierChunk += inChunk; }
+	float GetObstacleHitMultiplierChunk() const { return mObstacleHitMultiplierChunk; }
 
 public:
 	UPROPERTY(BlueprintReadWrite)
@@ -81,7 +86,9 @@ private:
 	UTextRenderComponent* mTextRenderComponent = nullptr;
 	FColor mColor;
 	float mFitness;
+	float mAmountOfNodesFitness;
 	float mLength;
+	float mObstacleHitMultiplierChunk;
 	bool mIsInObstacle;
 	bool mCanSeeTarget;
 	bool mHasReachedTarget;
