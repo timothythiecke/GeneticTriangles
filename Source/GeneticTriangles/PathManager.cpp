@@ -195,7 +195,7 @@ void APathManager::EvaluateFitness()
 				{
 					if (is_current_index_valid && is_previous_index_valid)
 					{
-						FVector direction = genetic_representation[i] - genetic_representation[i - 1];
+						FVector direction = genetic_representation[index] - genetic_representation[index - 1];
 						FVector collapsed_vector = direction;
 						collapsed_vector.Z = 0.0f;
 
@@ -218,7 +218,7 @@ void APathManager::EvaluateFitness()
 				// Obstacle avoidance
 				if (ApplyObstacleAvoidanceLogic)
 				{
-					if (GetWorld() != nullptr && genetic_representation.IsValidIndex(i))
+					if (GetWorld() != nullptr && is_current_index_valid)
 					{
 						TArray<FVector> trace_ends;
 						
@@ -241,7 +241,7 @@ void APathManager::EvaluateFitness()
 							//@TODO
 						}
 
-						FVector start = genetic_representation[i];
+						FVector start = genetic_representation[index];
 						for (const FVector& end : trace_ends)
 						{
 							FHitResult hit_result;
