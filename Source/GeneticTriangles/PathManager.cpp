@@ -6,27 +6,7 @@
 #include "Path.h"
 
 // Sets default values
-APathManager::APathManager() :
-	SceneComponent(nullptr),
-	PopulationCount(0),
-	MaxInitialVariation(40.0f),
-	MinAmountOfPointsPerPathAtStartup(5),
-	MaxAmountOfPointsPerPathAtStartup(5),
-	TimeBetweenGenerations(1.0f),
-	CrossoverProbability(70.0f),
-	mTimer(TimeBetweenGenerations),
-	AverageFitness(0.0f),
-	AmountOfNodesWeight(100.0f),
-	ProximityToTargetedNodeWeight(100.0f),
-	LengthWeight(100.0f),
-	CanSeeTargetWeight(100.0f),
-	ObstacleHitMultiplier(1.0f),
-	AggregateSelectOne(false),
-	MutationProbability(5.0f),
-	TranslatePointProbability(33.333f),
-	InsertionProbability(33.333f),
-	DeletionProbability(33.333f),
-	ObstacleAvoidanceBaseFitnessMultiplier(1.0f)
+APathManager::APathManager()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -226,7 +206,7 @@ void APathManager::EvaluateFitness()
 				}
 
 				// Obstacle avoidance
-				if (ApplyObstacleAvoidance)
+				if (ApplyObstacleAvoidanceLogic)
 				{
 					if (GetWorld() != nullptr && genetic_representation.IsValidIndex(i))
 					{
@@ -334,7 +314,7 @@ void APathManager::EvaluateFitness()
 			// Obstacle avoidance?
 			float obstacle_avoidance_multiplier = 1.0f;
 			float obstacle_avoidance_weight = ObstacleAvoidanceWeight;
-			if (ApplyObstacleAvoidance)
+			if (ApplyObstacleAvoidanceLogic)
 			{
 				/*if (path->GetAmountOfNodes() > 1)
 				{
