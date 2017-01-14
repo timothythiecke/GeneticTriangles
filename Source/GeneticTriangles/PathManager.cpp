@@ -85,9 +85,6 @@ void APathManager::RunGeneration()
 
 void APathManager::EvaluateFitness()
 {
-	/*if (GEngine != nullptr)
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Starting fitness evaluation..."));
-		*/
 	// What defines fitness for a path?
 	// 1. SHORTEST / CLOSEST
 	// -> Amount of chunks per path (less chunks == more fitness)
@@ -161,9 +158,14 @@ void APathManager::EvaluateFitness()
 			const TArray<FVector>& genetic_representation = path->GetGeneticRepresentation();
 			for (int32 index = 1; index < genetic_representation.Num(); ++index)
 			{
-				if (GetWorld() != nullptr && genetic_representation.IsValidIndex(index) && genetic_representation.IsValidIndex(index - 1))
+				const bool is_world_valid = GetWorld() != nullptr;
+				const bool is_current_index_valid = genetic_representation.IsValidIndex(index);
+				const bool is_previous_index_valid = genetic_representation.IsValidIndex(index - 1);
+
+				if (is_world_valid && is_current_index_valid && is_previous_index_valid)
 				{
-					// Check for obstacles
+					// Check for obstacles between previous and current node
+					// If a hit result is detected, either one of the nodes is in an obstacle or an obstacle is blocking the way
 					FHitResult obstacle_hit_result;
 					if (GetWorld()->LineTraceSingleByChannel(obstacle_hit_result, genetic_representation[index - 1], genetic_representation[index], ECollisionChannel::ECC_GameTraceChannel1))
 						path->MarkIsInObstacle();
@@ -174,35 +176,43 @@ void APathManager::EvaluateFitness()
 						path->MarkTravelingThroughTerrain();
 				}
 
-				// Check if the head is able to see the target node
-				if (GetWorld() != nullptr && genetic_representation.IsValidIndex(index) && index == genetic_representation.Num() - 1)
+				// Check if the head is able to see the target
+				// This is the case if no obstacles are in the way
+				if (is_world_valid && is_current_index_valid && index == genetic_representation.Num() - 1)
 				{
 					FHitResult hit_result;
 					if (!GetWorld()->LineTraceSingleByChannel(hit_result, genetic_representation[index], Nodes.IsValidIndex(1) ? Nodes[1]->GetActorLocation() : FVector::ZeroVector, ECollisionChannel::ECC_GameTraceChannel2))
 						path->MarkCanSeeTarget();
 				}
 
+				// Check if the path has reached the target
+				if ((Nodes[1]->GetActorLocation() - genetic_representation.Last()).Size() < 100.0f) // @TODO: Magic value, need radius of target node
+					path->MarkHasReachedTarget();
+
 				// Check if the slope between this node and the previous is inbetween the expected bounds
 				// Use dot product calculation between the vector between the two points and a vector with a constant Z
-				if (genetic_representation.IsValidIndex(i) && genetic_representation.IsValidIndex(i - 1))
+				if (UseSlopeFitnessEvaluation)
 				{
-					FVector direction = genetic_representation[i] - genetic_representation[i - 1];
-					FVector collapsed_vector = direction;
-					collapsed_vector.Z = 0.0f;
+					if (is_current_index_valid && is_previous_index_valid)
+					{
+						FVector direction = genetic_representation[i] - genetic_representation[i - 1];
+						FVector collapsed_vector = direction;
+						collapsed_vector.Z = 0.0f;
 
-					direction.Normalize();
-					collapsed_vector.Normalize();
-					
-					const float dot_product = FVector::DotProduct(direction, collapsed_vector);
-					const float radians = FMath::Acos(dot_product);
-					const float degrees = FMath::RadiansToDegrees(radians);
+						direction.Normalize();
+						collapsed_vector.Normalize();
 
-					// Check if radians are radians and degrees are degrees, as Acos doesn't specify what the return value is
-					// Check Kismet
-					// UE_LOG(LogTemp, Warning, TEXT("Radians: %f Degrees: %f"), radians, degrees);
+						const float dot_product = FVector::DotProduct(direction, collapsed_vector);
+						const float radians = FMath::Acos(dot_product);
+						const float degrees = FMath::RadiansToDegrees(radians);
 
-					if (degrees > MaxSlopeToleranceAngle)
-						path->MarkSlopeTooIntense();
+						// Check if radians are radians and degrees are degrees, as Acos doesn't specify what the return value is
+						// Check Kismet
+						// UE_LOG(LogTemp, Warning, TEXT("Radians: %f Degrees: %f"), radians, degrees);
+
+						if (degrees > MaxSlopeToleranceAngle)
+							path->MarkSlopeTooIntense();
+					}
 				}
 
 				// Obstacle avoidance
@@ -211,16 +221,25 @@ void APathManager::EvaluateFitness()
 					if (GetWorld() != nullptr && genetic_representation.IsValidIndex(i))
 					{
 						TArray<FVector> trace_ends;
-						trace_ends.Reserve(8);
+						
+						if (TraceBehaviour == EObstacleTraceBehaviour::WindDirectionTracing)
+						{
+							trace_ends.Reserve(8);
 
-						trace_ends.Add(FVector(1.0f, 0.0f, 0.0f) * TraceDistance); // East
-						trace_ends.Add(FVector(1.0f, -1.0f, 0.0f) * TraceDistance); // South-East
-						trace_ends.Add(FVector(0.0f, -1.0f, 0.0f) * TraceDistance); // South
-						trace_ends.Add(FVector(-1.0f, -1.0f, 0.0f) * TraceDistance); // South-West
-						trace_ends.Add(FVector(-1.0f, 0.0f, 0.0f) * TraceDistance); // West
-						trace_ends.Add(FVector(-1.0f, 1.0f, 0.0f) * TraceDistance); // North-West
-						trace_ends.Add(FVector(0.0f, 1.0f, 0.0f) * TraceDistance); // North
-						trace_ends.Add(FVector(1.0f, 1.0f, 0.0f) * TraceDistance); // North-East
+							trace_ends.Add(FVector(1.0f, 0.0f, 0.0f) * TraceDistance); // East
+							trace_ends.Add(FVector(1.0f, -1.0f, 0.0f) * TraceDistance); // South-East
+							trace_ends.Add(FVector(0.0f, -1.0f, 0.0f) * TraceDistance); // South
+							trace_ends.Add(FVector(-1.0f, -1.0f, 0.0f) * TraceDistance); // South-West
+							trace_ends.Add(FVector(-1.0f, 0.0f, 0.0f) * TraceDistance); // West
+							trace_ends.Add(FVector(-1.0f, 1.0f, 0.0f) * TraceDistance); // North-West
+							trace_ends.Add(FVector(0.0f, 1.0f, 0.0f) * TraceDistance); // North
+							trace_ends.Add(FVector(1.0f, 1.0f, 0.0f) * TraceDistance); // North-East
+
+						}
+						else
+						{
+							//@TODO
+						}
 
 						FVector start = genetic_representation[i];
 						for (const FVector& end : trace_ends)
@@ -234,10 +253,6 @@ void APathManager::EvaluateFitness()
 					}
 				}
 			}
-
-			// Check if the head is inside the node sphere
-			if ((Nodes[1]->GetActorLocation() - genetic_representation.Last()).Size() < 100.0f) // @TODO: Magic value
-				path->MarkHasReachedTarget();
 		}
 		else
 			UE_LOG(LogTemp, Warning, TEXT("APathManager::EvaluateFitness >> mPaths contains an invalid APath* at index %d"), i);
@@ -259,13 +274,6 @@ void APathManager::EvaluateFitness()
 		if (mPaths.IsValidIndex(i) && mPaths[i]->IsValidLowLevelFast())
 		{
 			path = mPaths[i];
-
-			// Final node in relation to targetting node
-			// Length
-			// Amount of nodes
-
-			// Blend value
-			// Y = (X- X0) / (X1 - X0)
 
 			// Need zero handling
 			float node_amount_blend_value = 0.0f;
@@ -303,53 +311,42 @@ void APathManager::EvaluateFitness()
 
 			// Slope too intense for the path to continue on, mark unfit
 			float slope_too_intense_multiplier = 1.0f;
-			if (path->GetSlopeTooIntense())
+			if (UseSlopeFitnessEvaluation && path->GetSlopeTooIntense())
 				slope_too_intense_multiplier = SlopeTooIntenseMultiplier;
 
 			// Path traveling through terrain?
 			float traveling_through_terrain_multiplier = 1.0f;
-			if (path->GetTravelingThroughTerrain())
+			if (UseSlopeFitnessEvaluation && path->GetTravelingThroughTerrain())
 				traveling_through_terrain_multiplier = PiercesTerrainMultiplier;
 
 			// Obstacle avoidance?
+			// @TODO
 			float obstacle_avoidance_multiplier = 1.0f;
-			float obstacle_avoidance_weight = ObstacleAvoidanceWeight;
+			float obstacle_avoidance_weight = 0.0f;
 			if (ApplyObstacleAvoidanceLogic)
 			{
-				/*if (path->GetAmountOfNodes() > 1)
-				{
-					obstacle_avoidance_multiplier = ObstacleAvoidanceBaseFitnessMultiplier - (path->GetObstacleHitMultiplierChunk() / (float)(path->GetAmountOfNodes() - 1));
-
-					obstacle_avoidance_weight *= obstacle_avoidance_multiplier;
-
-					if (obstacle_avoidance_multiplier != 1.0f)
-						GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::White, FString::SanitizeFloat(obstacle_avoidance_multiplier));
-				}*/
-
 				if (path->GetObstacleHitMultiplierChunk() > 0.0f)
 				{
 					obstacle_avoidance_multiplier = 0.0f;
 					obstacle_avoidance_weight = 0.0f;
 					++offenders;
 				}
+				else
+				{
+					obstacle_avoidance_weight = 100.0f;
+				}
 			}
-			else
-			{
-				obstacle_avoidance_weight = 0.0f;
-			}
-
 
 			// Calculate final fitness based on the various weights and multipliers
-			const float final_fitness = ((AmountOfNodesWeight * node_amount_blend_value) + 
-										(ProximityToTargetedNodeWeight * proximity_blend_value) +
-										(LengthWeight * length_blend_value) +
-										can_see_target_fitness +
-										target_reached_fitness +
-										SlopeWeight +
-										obstacle_avoidance_weight) *
-										obstacle_multiplier * 
-										slope_too_intense_multiplier *
-										traveling_through_terrain_multiplier;
+			const float weight_fitness = ((AmountOfNodesWeight * node_amount_blend_value) +
+											(ProximityToTargetedNodeWeight * proximity_blend_value) +
+											(LengthWeight * length_blend_value) +
+											can_see_target_fitness +
+											target_reached_fitness +
+											SlopeWeight +
+											obstacle_avoidance_weight);
+			const float weight_multiplier = obstacle_multiplier * slope_too_intense_multiplier * traveling_through_terrain_multiplier;
+			const float final_fitness = weight_fitness * weight_multiplier;
 
 			path->SetFitnessValues(final_fitness, AmountOfNodesWeight * node_amount_blend_value);
 			
