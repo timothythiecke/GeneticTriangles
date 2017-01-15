@@ -172,9 +172,11 @@ private:
 	void Purge();
 	void ColorCodePathsByFitness();
 	void LogGenerationInfo();
+	void AddGenerationInfoToSerializableData();
 
 	void StopRun();
 	void SerializeData();
+	void DeserializeData();
 
 private:
 	struct FGenerationInfo

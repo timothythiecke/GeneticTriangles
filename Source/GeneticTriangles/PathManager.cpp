@@ -91,6 +91,7 @@ void APathManager::RunGeneration()
 		mGenerationInfo.mGenerationNumber = GenerationCount++;
 
 		LogGenerationInfo();
+		AddGenerationInfoToSerializableData();
 	}
 	else
 		UE_LOG(LogTemp, Warning, TEXT("APathManager::RunGeneration() >> One of the nodes is invalid!"));
@@ -842,9 +843,23 @@ void APathManager::SerializeData()
 		file_manager.MakeDirectory(*target_directory);
 
 	FBufferArchive archive;
+	archive.Reserve(1000000);
 	{
 		// Write ALL info to the buffer
-		archive << mTimer;
+
+		// Write paths to the archive
+		for (int i = 0; i < mSerializationData.Num(); ++i) // Iterates per generation
+		{
+			for (int j = 0; j < mSerializationData[i].Num(); ++j) // Iterates per path
+			{
+				archive << mSerializationData[i][j].mNodeAmount;
+
+				for (int k = 0; k < mSerializationData[i][j].mGeneticRepresentation.Num(); ++k)
+				{
+					archive << mSerializationData[i][j].mGeneticRepresentation[k];
+				}
+			}
+		}
 	}
 	
 	TArray<uint8> compressed_data;
@@ -867,4 +882,45 @@ void APathManager::SerializeData()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("APathManager::SerializeData >> Unable to serialize data!"));
 	}
+}
+
+
+
+void APathManager::DeserializeData()
+{
+
+}
+
+
+
+/**
+* Adds the information of the current generation to the data which will be serialized at the end
+*/
+void APathManager::AddGenerationInfoToSerializableData()
+{
+	// Create an array of path serialization data
+	// Every entry corresponds to a path
+	TArray<FPathSerializationData> serializable_data_of_paths;
+	serializable_data_of_paths.Reserve(PopulationCount);
+
+	// Add each path
+	for (const APath* path : mPaths)
+	{
+		check(path != nullptr);
+		check(path->IsValidLowLevel());
+
+		// Make sure everything corresponds to the path
+		FPathSerializationData path_serialization_data;
+		
+		path_serialization_data.mNodeAmount = path->GetAmountOfNodes();
+		
+		path_serialization_data.mGeneticRepresentation.Reserve(path->GetAmountOfNodes());
+		path_serialization_data.mGeneticRepresentation = path->GetGeneticRepresentation();
+
+		// Then add it to the serialization array
+		serializable_data_of_paths.Add(path_serialization_data);
+	}
+
+	// At the end, add the data to the data which will be serialized
+	mSerializationData.Add(serializable_data_of_paths);
 }
