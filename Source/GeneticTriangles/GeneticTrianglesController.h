@@ -11,6 +11,7 @@
 // Forward declaration
 class ATriangleManager;
 class AUpdatedTriangleManager;
+class APathManager;
 
 /**
  * 
@@ -48,9 +49,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GeneticTriangles")
 	void SetMutationRateBalancing(const bool UsesMutationRateBalancing);
 
-	/*UFUNCTION(BlueprintCallable, Category = "GeneticPaths")
+	UFUNCTION(BlueprintCallable, Category = "GeneticPaths")
 	void RequestAnimationControlStateUpdate(const EAnimationControlState inAnimationControlState);
-	*/
+	
 protected:
 	virtual void GASpaceBar();
 	virtual void GAFitness();
@@ -60,5 +61,5 @@ protected:
 private:
 	ATriangleManager* mTriangleManager = nullptr;
 	AUpdatedTriangleManager* mUpdatedTriangleManager = nullptr;
-	/*APathManager* mPathManager = nullptr;*/
+	APathManager* mPathManager = nullptr;
 };

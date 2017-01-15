@@ -7,50 +7,12 @@
 
 // API includes
 #include "Disposable.h"
+#include "Enums.h"
 
 #include "PathManager.generated.h"
 
 // Forward decl
 class APath;
-
-UENUM(BlueprintType)
-enum class ECrossoverOperator : uint8
-{
-	SinglePoint UMETA(DisplayName="Single Point"),
-	DoublePoint UMETA(DisplayName="Double Point"),
-	Uniform UMETA(DisplayName="Uniform")
-};
-
-UENUM(BlueprintType, Meta = (Bitflags))
-enum EMutationType
-{
-	TranslatePoint = 1	UMETA(DisplayName = "TranslatePointMutation"),
-	Insertion = 2		UMETA(DisplayName = "InsertionMutation"),
-	Deletion = 3		UMETA(DisplayName = "DeletionMutation")
-};
-ENUM_CLASS_FLAGS(EMutationType)
-
-/**
-* AnyButStart: A random chromosome is selected (except the starting one) and is mutated
-* HeadOnly: The last chromosome in the genetic representation is mutated
-* HeadFalloff: The last chromosome in the genetic representation is mutated, the same mutation is applied with a linear falloff for each subsequent chromosome
-* AllAtOnce: All chromsomes (except the starting one) are mutated at the same time
-*/
-UENUM(BlueprintType)
-enum class ETranslationMutationType : uint8
-{
-	AnyButStart UMETA(DisplayName = "AnyButStart"),
-	HeadOnly UMETA(DisplayName = "HeadOnly"),
-	HeadFalloff UMETA(DisplayName = "HeadFalloff"),
-	AllAtOnce UMETA(DisplayName = "AllAtOnce")
-};
-
-UENUM(BlueprintType)
-enum class EObstacleTraceBehaviour : uint8
-{
-	WindDirectionTracing UMETA(DisplayName = "WindDirectionTracing"),
-	CircleTracing UMETA(DisplayName = "CircleTracing")
-};
 
 UCLASS()
 class GENETICTRIANGLES_API APathManager : public AActor, public IDisposable
@@ -69,7 +31,7 @@ public:
 
 	virtual void Dispose();
 
-	void RunGeneration();
+	void ChangeAnimationControlState(const EAnimationControlState inAnimationControlState);
 
 public:
 	UPROPERTY(BlueprintReadWrite, meta = (Tooltip = "The transform component of the path manager, to be exposed to the editor."))
@@ -83,6 +45,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ToolTip = "Nodes A and B in the world"))
 	TArray<AActor*> Nodes;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ToolTip = "Start generation run automatically in Editor"))
+	bool AutoRun = false;
 
 	// Customization for user
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Customization", meta = (ToolTip = "The amount of seconds before a new generation is run"))
@@ -196,6 +161,9 @@ public:
 
 
 private:
+	void RunGenerationTimer(const float inDeltaTime);
+	void RunGeneration();
+
 	void EvaluateFitness();
 	void SelectionStep();
 	void CrossoverStep();
@@ -203,6 +171,8 @@ private:
 	void Purge();
 	void ColorCodePathsByFitness();
 	void LogGenerationInfo();
+
+	void StopRun();
 
 private:
 	struct FGenerationInfo
@@ -224,4 +194,7 @@ private:
 	TArray<APath*> mMatingPaths;
 	float mTimer;
 	float mTotalFitness;
+
+	EAnimationControlState mNextAnimationControlState = EAnimationControlState::Limbo;
+	EAnimationControlState mPreviousAnimationControlState = EAnimationControlState::Limbo;
 };

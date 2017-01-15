@@ -180,7 +180,27 @@ void AGeneticTrianglesController::SetMutationRateBalancing(const bool UsesMutati
 
 
 
-/*void AGeneticTrianglesController::RequestAnimationControlStateUpdate(const EAnimationControlState inAnimationControlState)
+void AGeneticTrianglesController::RequestAnimationControlStateUpdate(const EAnimationControlState inAnimationControlState)
 {
+	if (mPathManager == nullptr)
+	{
+		for (TActorIterator<AActor> actor_iterator(GetWorld()); actor_iterator; ++actor_iterator)
+		{
+			APathManager* ptr = Cast<APathManager>(*actor_iterator);
 
-}*/
+			if (ptr != nullptr)
+			{
+				mPathManager = ptr;
+				break;
+			}
+		}
+	}
+	else
+	{
+		check(mPathManager->IsValidLowLevel());
+	}
+
+	check(mPathManager != nullptr);
+
+	mPathManager->ChangeAnimationControlState(inAnimationControlState);
+}

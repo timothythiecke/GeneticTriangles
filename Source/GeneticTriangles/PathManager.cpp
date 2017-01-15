@@ -45,8 +45,10 @@ void APathManager::Tick( float DeltaTime )
 		RunGenerationTimer(DeltaTime);
 		break;
 	case EAnimationControlState::Pause:
+		LogGenerationInfo(); // Keep track of information on screen when paused (for now)
 		break;
 	case EAnimationControlState::Stop:
+		StopRun();
 		break;
 	case EAnimationControlState::Limbo:
 		break;
@@ -779,10 +781,24 @@ void APathManager::ChangeAnimationControlState(const EAnimationControlState inAn
 		}
 	}
 
-
 	/**
 	* Limbo  >  Play
 	*   ^   v/  v ^   
 	* Stop  <  Pause
 	*/
+}
+
+
+
+void APathManager::StopRun()
+{
+	// @TODO: Serialize data
+
+	
+	// Reset data
+	GenerationCount = 0;
+
+	// Stop generation cycle
+	mPreviousAnimationControlState = EAnimationControlState::Limbo;
+	mNextAnimationControlState = EAnimationControlState::Limbo;
 }
