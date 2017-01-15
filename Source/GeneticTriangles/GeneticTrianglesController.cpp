@@ -213,6 +213,17 @@ int32 AGeneticTrianglesController::RequestKnowledgeOfGenerationCount()
 
 
 
+void AGeneticTrianglesController::RequestScrubUpdate(const float inBlendValue)
+{
+	FindPathManager();
+	
+	check(mPathManager != nullptr);
+
+	mPathManager->HandleScrubUpdate(inBlendValue);
+}
+
+
+
 void AGeneticTrianglesController::FindPathManager()
 {
 	if (mPathManager == nullptr)
@@ -233,3 +244,5 @@ void AGeneticTrianglesController::FindPathManager()
 		check(mPathManager->IsValidLowLevel());
 	}
 }
+
+

@@ -919,6 +919,10 @@ void APathManager::DeserializeData()
 		int32 population_size = 0;
 		from_binary << population_size;
 
+		// Prepare data for post deserialization
+		mDeserializedDataGenerationAmount = total_amount_of_generations;
+		mDeserializedDataPopulationAmount = population_size;
+
 		for (int32 generation_index = 0; generation_index < total_amount_of_generations; ++generation_index) // Iterate per generation
 		{
 			TArray<FPathSerializationData> all_paths;
@@ -953,7 +957,10 @@ void APathManager::DeserializeData()
 	decompressed_data.Empty();
 	decompressed_data.Close();
 
+	// If the following line breaks the application, then something went wrong during the (de)serialization process
 	FPathSerializationData test = mDeserializationData[0][0];
+
+	PostDeserialize();
 }
 
 
@@ -988,4 +995,51 @@ void APathManager::AddGenerationInfoToSerializableData()
 
 	// At the end, add the data to the data which will be serialized
 	mSerializationData.Add(serializable_data_of_paths);
+}
+
+
+
+void APathManager::HandleScrubUpdate(const float inScrubValue)
+{
+	int32 total_amount_of_generations = mDeserializationData.Num();
+}
+
+
+
+void APathManager::PostDeserialize()
+{
+	// Stop running cycles
+	mPreviousAnimationControlState = EAnimationControlState::Limbo;
+	mNextAnimationControlState = EAnimationControlState::Limbo;
+
+	// Purge old paths if there are any alive
+	Purge();
+
+	// Initialize new paths based on deserializeddata
+	DeserializeInitialization();
+
+	// Then reset the access index for scrubbing through the data
+	mDeserializedDataScrubIndex = 0;
+}
+
+
+
+void APathManager::DeserializeInitialization()
+{
+	//@TODO: Consider merging this with the standard initialization function
+	
+	// Create population
+	mPaths.Empty();
+	mPaths.Reserve(PopulationCount);
+
+	for (int32 i = 0; i < mDeserializedDataPopulationAmount; ++i)
+	{
+		APath* path = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());
+
+		ensure(path != nullptr);
+		
+		path->SetGeneticRepresentation(mDeserializationData[mDeserializedDataScrubIndex][i].mGeneticRepresentation);
+
+		mPaths.Add(path);
+	}
 }

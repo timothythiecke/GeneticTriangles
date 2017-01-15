@@ -49,6 +49,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GeneticTriangles")
 	void SetMutationRateBalancing(const bool UsesMutationRateBalancing);
 
+	// Paths
 	UFUNCTION(BlueprintCallable, Category = "GeneticPaths")
 	void RequestAnimationControlStateUpdate(const EAnimationControlState inAnimationControlState);
 
@@ -58,6 +59,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GeneticPaths")
 	int32 RequestKnowledgeOfGenerationCount();
 	
+	UFUNCTION(BlueprintCallable, Category = "GeneticPaths")
+	void RequestScrubUpdate(const float inBlendValue);
+
 protected:
 	virtual void GASpaceBar();
 	virtual void GAFitness();
