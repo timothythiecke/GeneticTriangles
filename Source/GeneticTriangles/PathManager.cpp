@@ -29,6 +29,9 @@ void APathManager::Dispose()
 void APathManager::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// Allocate space for 20000 generations
+	mSerializationData.Reserve(20000);
 }
 
 
@@ -74,24 +77,7 @@ void APathManager::RunGenerationTimer(const float inDeltaTime)
 void APathManager::RunGeneration()
 {
 	if (GenerationCount == 0)
-	{
-		// Create population
-		mPaths.Empty();
-		mPaths.Reserve(PopulationCount);
-
-		for (int32 i = 0; i < PopulationCount; ++i)
-		{
-			APath* path = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());
-
-			ensure(path != nullptr);
-
-			path->PostInit(MinAmountOfPointsPerPathAtStartup, MaxAmountOfPointsPerPathAtStartup);
-			path->RandomizeValues(Nodes[0], MaxInitialVariation);
-			path->DetermineGeneticRepresentation();
-
-			mPaths.Add(path);
-		}
-	}
+		InitializeRun();
 
 	if (Nodes.IsValidIndex(0) && Nodes.IsValidIndex(1) && Nodes[0]->IsValidLowLevelFast() && Nodes[1]->IsValidLowLevelFast())
 	{
@@ -109,6 +95,29 @@ void APathManager::RunGeneration()
 	else
 		UE_LOG(LogTemp, Warning, TEXT("APathManager::RunGeneration() >> One of the nodes is invalid!"));
 }
+
+
+
+void APathManager::InitializeRun()
+{
+	// Create population
+	mPaths.Empty();
+	mPaths.Reserve(PopulationCount);
+
+	for (int32 i = 0; i < PopulationCount; ++i)
+	{
+		APath* path = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());
+
+		ensure(path != nullptr);
+
+		path->PostInit(MinAmountOfPointsPerPathAtStartup, MaxAmountOfPointsPerPathAtStartup);
+		path->RandomizeValues(Nodes[0], MaxInitialVariation);
+		path->DetermineGeneticRepresentation();
+
+		mPaths.Add(path);
+	}
+}
+
 
 
 void APathManager::EvaluateFitness()
@@ -824,10 +833,17 @@ void APathManager::StopRun()
 
 void APathManager::SerializeData()
 {
+	// Create a directory for us to safely work in
+	// @TODO: This assumes that the PC has a D drive
+	//		  WINAPI function, research what happens if drive does not exist
 	IFileManager& file_manager = IFileManager::Get();
+	const FString target_directory("D:/GeneticTrianglesOutput");
+	if (file_manager.DirectoryExists(*target_directory))
+		file_manager.MakeDirectory(*target_directory);
 
 	FBufferArchive archive;
 	{
+		// Write ALL info to the buffer
 		archive << mTimer;
 	}
 	
@@ -837,13 +853,18 @@ void APathManager::SerializeData()
 	compressor << archive;
 	compressor.Flush();
 
-	const FString file_path("D:/Output/Paths.ga");
-	FFileHelper::SaveArrayToFile(compressed_data, *file_path);
+	const FString file_path("D:/GeneticTrianglesOutput/Paths.ga");
+	if (FFileHelper::SaveArrayToFile(compressed_data, *file_path))
+	{
+		compressor.FlushCache();
+		compressed_data.Empty();
 
-	compressor.FlushCache();
-	compressed_data.Empty();
-	
-	archive.FlushCache();
-	archive.Empty();
-	archive.Close();
+		archive.FlushCache();
+		archive.Empty();
+		archive.Close();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("APathManager::SerializeData >> Unable to serialize data!"));
+	}
 }

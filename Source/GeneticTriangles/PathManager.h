@@ -164,6 +164,7 @@ private:
 	void RunGenerationTimer(const float inDeltaTime);
 	void RunGeneration();
 
+	void InitializeRun();
 	void EvaluateFitness();
 	void SelectionStep();
 	void CrossoverStep();
@@ -198,4 +199,11 @@ private:
 
 	EAnimationControlState mNextAnimationControlState = EAnimationControlState::Limbo;
 	EAnimationControlState mPreviousAnimationControlState = EAnimationControlState::Limbo;
+
+	struct FPathSerializationData
+	{
+		int32 mNodeAmount;
+		TArray<FVector> mGeneticRepresentation;
+	};
+	TArray<TArray<FPathSerializationData>> mSerializationData;
 };
