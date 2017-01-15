@@ -797,7 +797,23 @@ void APathManager::StopRun()
 	
 	// Reset data
 	GenerationCount = 0;
+	
+	// Get rid of paths
+	// Keep memory allocated
+	for (APath* path : mPaths)
+	{
+		if (path != nullptr && path->IsValidLowLevel())
+			path->Dispose();
+	}
+	mPaths.Empty(mPaths.Num());
 
+	for (APath* path : mMatingPaths)
+	{
+		if (path != nullptr && path->IsValidLowLevel())
+			path->Dispose();
+	}
+	mMatingPaths.Empty(mMatingPaths.Num());
+	
 	// Stop generation cycle
 	mPreviousAnimationControlState = EAnimationControlState::Limbo;
 	mNextAnimationControlState = EAnimationControlState::Limbo;
