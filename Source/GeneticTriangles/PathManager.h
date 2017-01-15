@@ -180,6 +180,7 @@ private:
 	void SerializeData();
 	void PostDeserialize();
 	void DeserializeInitialization();
+	void UpdateScrub();
 
 private:
 	struct FGenerationInfo

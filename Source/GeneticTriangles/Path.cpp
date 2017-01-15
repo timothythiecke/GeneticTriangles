@@ -91,6 +91,7 @@ void APath::DetermineGeneticRepresentation()
 
 void APath::SetGeneticRepresentation(const TArray<FVector>& inGeneticRepresentation)
 {
+	mGeneticRepresentation.Empty();
 	mGeneticRepresentation.Reserve(inGeneticRepresentation.Num());
 
 	for (const FVector& location : inGeneticRepresentation)

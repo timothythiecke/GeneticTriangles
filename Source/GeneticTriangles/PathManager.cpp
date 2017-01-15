@@ -1001,7 +1001,9 @@ void APathManager::AddGenerationInfoToSerializableData()
 
 void APathManager::HandleScrubUpdate(const float inScrubValue)
 {
-	int32 total_amount_of_generations = mDeserializationData.Num();
+	mDeserializedDataScrubIndex = FMath::FloorToInt(mDeserializedDataGenerationAmount * inScrubValue);
+	
+	UpdateScrub();
 }
 
 
@@ -1036,10 +1038,28 @@ void APathManager::DeserializeInitialization()
 	{
 		APath* path = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());
 
-		ensure(path != nullptr);
+		check(path != nullptr);
 		
 		path->SetGeneticRepresentation(mDeserializationData[mDeserializedDataScrubIndex][i].mGeneticRepresentation);
 
 		mPaths.Add(path);
+	}
+}
+
+
+
+/**
+* Updates the genetic representation of the paths based on the deserialized data
+*/
+void APathManager::UpdateScrub()
+{
+	for (int32 i = 0; i < mPaths.Num(); ++i)
+	{
+		APath* path = mPaths[i];
+
+		check(path != nullptr);
+
+		if (mDeserializationData.IsValidIndex(mDeserializedDataScrubIndex) && mDeserializationData[mDeserializedDataScrubIndex].IsValidIndex(i))
+			path->SetGeneticRepresentation(mDeserializationData[mDeserializedDataScrubIndex][i].mGeneticRepresentation);
 	}
 }
