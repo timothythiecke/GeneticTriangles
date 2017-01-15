@@ -16,44 +16,6 @@ APathManager::APathManager()
 	RootComponent = SceneComponent;
 }
 
-// Called when the game starts or when spawned
-void APathManager::BeginPlay()
-{
-	Super::BeginPlay();
-	
-	// Create population
-	mPaths.Empty();
-	mPaths.Reserve(PopulationCount);
-
-	for (int32 i = 0; i < PopulationCount; ++i)
-	{
-		APath* path = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());
-
-		ensure(path != nullptr);
-
-		path->PostInit(MinAmountOfPointsPerPathAtStartup, MaxAmountOfPointsPerPathAtStartup);
-		path->RandomizeValues(Nodes[0], MaxInitialVariation);
-		path->DetermineGeneticRepresentation();
-
-		mPaths.Add(path);
-	}
-}
-
-// Called every frame
-void APathManager::Tick( float DeltaTime )
-{
-	Super::Tick( DeltaTime );
-
-	// Start a countdown so we run a generation each interval
-	mTimer -= DeltaTime;
-	if (mTimer < 0.0f)
-	{
-		mTimer = TimeBetweenGenerations;
-
-		RunGeneration();
-	}
-}
-
 
 // Allow dispose handling before destructing
 void APathManager::Dispose()
@@ -62,9 +24,72 @@ void APathManager::Dispose()
 }
 
 
+// Called when the game starts or when spawned
+void APathManager::BeginPlay()
+{
+	Super::BeginPlay();
+}
+
+
+// Called every frame
+void APathManager::Tick( float DeltaTime )
+{
+	Super::Tick( DeltaTime );
+
+	if (AutoRun)
+		mPreviousAnimationControlState = EAnimationControlState::Play;
+
+	switch (mPreviousAnimationControlState)
+	{
+	case EAnimationControlState::Play:
+		RunGenerationTimer(DeltaTime);
+		break;
+	case EAnimationControlState::Pause:
+		break;
+	case EAnimationControlState::Stop:
+		break;
+	case EAnimationControlState::Limbo:
+		break;
+	default:
+		break;
+	}
+}
+
+
+void APathManager::RunGenerationTimer(const float inDeltaTime)
+{
+	// TimeBetweenGenerations may be altered anywhere
+	mTimer -= inDeltaTime;
+	if (mTimer < 0.0f)
+	{
+		mTimer = TimeBetweenGenerations;
+		
+		RunGeneration();
+	}
+}
 
 void APathManager::RunGeneration()
 {
+	if (GenerationCount == 0)
+	{
+		// Create population
+		mPaths.Empty();
+		mPaths.Reserve(PopulationCount);
+
+		for (int32 i = 0; i < PopulationCount; ++i)
+		{
+			APath* path = GetWorld()->SpawnActor<APath>(GetTransform().GetLocation(), GetTransform().GetRotation().Rotator());
+
+			ensure(path != nullptr);
+
+			path->PostInit(MinAmountOfPointsPerPathAtStartup, MaxAmountOfPointsPerPathAtStartup);
+			path->RandomizeValues(Nodes[0], MaxInitialVariation);
+			path->DetermineGeneticRepresentation();
+
+			mPaths.Add(path);
+		}
+	}
+
 	if (Nodes.IsValidIndex(0) && Nodes.IsValidIndex(1) && Nodes[0]->IsValidLowLevelFast() && Nodes[1]->IsValidLowLevelFast())
 	{
 		EvaluateFitness();
@@ -734,4 +759,30 @@ void APathManager::LogGenerationInfo()
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Amount of reproducing crossovers: ") + FString::FromInt(mGenerationInfo.mCrossoverAmount));
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("Generation #") + FString::FromInt(mGenerationInfo.mGenerationNumber));
 	}
+}
+
+
+
+void APathManager::ChangeAnimationControlState(const EAnimationControlState inAnimationControlState)
+{
+	mNextAnimationControlState = inAnimationControlState;
+
+	if (mNextAnimationControlState != mPreviousAnimationControlState)
+	{
+		if ((mPreviousAnimationControlState == EAnimationControlState::Limbo && mNextAnimationControlState == EAnimationControlState::Play) ||
+			(mPreviousAnimationControlState == EAnimationControlState::Play && mNextAnimationControlState == EAnimationControlState::Pause) ||
+			(mPreviousAnimationControlState == EAnimationControlState::Play && mNextAnimationControlState == EAnimationControlState::Stop) ||
+			(mPreviousAnimationControlState == EAnimationControlState::Pause && mNextAnimationControlState == EAnimationControlState::Play) ||
+			(mPreviousAnimationControlState == EAnimationControlState::Pause && mNextAnimationControlState == EAnimationControlState::Stop))
+		{
+			mPreviousAnimationControlState = mNextAnimationControlState;
+		}
+	}
+
+
+	/**
+	* Limbo  >  Play
+	*   ^   v/  v ^   
+	* Stop  <  Pause
+	*/
 }

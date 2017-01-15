@@ -3,6 +3,9 @@
 #pragma once
 
 #include "GameFramework/PlayerController.h"
+
+#include "Enums.h"
+
 #include "GeneticTrianglesController.generated.h"
 
 // Forward declaration
@@ -21,30 +24,33 @@ public:
 	AGeneticTrianglesController();
 	virtual void BeginPlay() override;
 	
-	UFUNCTION(BlueprintCallable, Category = "GeneticAlgorithm")
+	UFUNCTION(BlueprintCallable, Category = "GeneticTriangles")
 	void GeneratePopulation();
 
-	UFUNCTION(BlueprintCallable, Category = "GeneticAlgorithm")
+	UFUNCTION(BlueprintCallable, Category = "GeneticTriangles")
 	void EvaluateFitnessOfPopulation();
 
-	UFUNCTION(BlueprintCallable, Category = "GeneticAlgorithm")
+	UFUNCTION(BlueprintCallable, Category = "GeneticTriangles")
 	void SelectPairsForReproduction();
 
-	UFUNCTION(BlueprintCallable, Category = "GeneticAlgorithm")
+	UFUNCTION(BlueprintCallable, Category = "GeneticTriangles")
 	void CrossoverStep();
 
-	UFUNCTION(BlueprintCallable, Category = "GeneticAlgorithm")
+	UFUNCTION(BlueprintCallable, Category = "GeneticTriangles")
 	void Mutation();
 
-	UFUNCTION(BlueprintCallable, Category = "GeneticAlgorithm")
+	UFUNCTION(BlueprintCallable, Category = "GeneticTriangles")
 	void DoEverything();
 
-	UFUNCTION(BlueprintCallable, Category = "GeneticAlgorithm")
+	UFUNCTION(BlueprintCallable, Category = "GeneticTriangles")
 	ATriangleManager* GetTriangleManager() const { return mTriangleManager; }
 
-	UFUNCTION(BlueprintCallable, Category = "GeneticAlgorithm")
+	UFUNCTION(BlueprintCallable, Category = "GeneticTriangles")
 	void SetMutationRateBalancing(const bool UsesMutationRateBalancing);
 
+	/*UFUNCTION(BlueprintCallable, Category = "GeneticPaths")
+	void RequestAnimationControlStateUpdate(const EAnimationControlState inAnimationControlState);
+	*/
 protected:
 	virtual void GASpaceBar();
 	virtual void GAFitness();
@@ -54,4 +60,5 @@ protected:
 private:
 	ATriangleManager* mTriangleManager = nullptr;
 	AUpdatedTriangleManager* mUpdatedTriangleManager = nullptr;
+	/*APathManager* mPathManager = nullptr;*/
 };

@@ -10,9 +10,6 @@
 
 #include "Path.generated.h"
 
-// Forward declaration
-enum class ETranslationMutationType : uint8;
-
 UCLASS()
 class GENETICTRIANGLES_API APath : public AActor, public IDisposable
 {

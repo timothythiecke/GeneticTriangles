@@ -5,6 +5,7 @@
 
 #include "TriangleManager.h"
 #include "UpdatedTriangleManager.h"
+#include "PathManager.h"
 
 #include "EngineUtils.h"
 
@@ -176,3 +177,10 @@ void AGeneticTrianglesController::SetMutationRateBalancing(const bool UsesMutati
 	if (mTriangleManager != nullptr)
 		mTriangleManager->SetBalanceMutationRate(UsesMutationRateBalancing);
 }
+
+
+
+/*void AGeneticTrianglesController::RequestAnimationControlStateUpdate(const EAnimationControlState inAnimationControlState)
+{
+
+}*/
