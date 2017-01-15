@@ -847,6 +847,10 @@ void APathManager::SerializeData()
 	{
 		// Write ALL info to the buffer
 
+		// Write generation count & population count
+		archive << GenerationCount;
+		archive << PopulationCount;
+
 		// Write paths to the archive
 		for (int i = 0; i < mSerializationData.Num(); ++i) // Iterates per generation
 		{
@@ -888,7 +892,68 @@ void APathManager::SerializeData()
 
 void APathManager::DeserializeData()
 {
+	const FString file_path("D:/GeneticTrianglesOutput/Paths.ga");
 
+	IFileManager& file_manager = IFileManager::Get();
+	if (!file_manager.FileExists(*file_path))
+		return;
+
+	TArray<uint8> compressed_data;
+	FFileHelper::LoadFileToArray(compressed_data, *file_path);
+
+	FArchiveLoadCompressedProxy decompressor = FArchiveLoadCompressedProxy(compressed_data, ECompressionFlags::COMPRESS_ZLIB);
+	
+	FBufferArchive decompressed_data;
+	decompressor << decompressed_data;
+
+	FMemoryReader from_binary = FMemoryReader(decompressed_data, true);
+	from_binary.Seek(0);
+
+	// Restore settings from data
+	{
+		mDeserializationData.Reserve(20000);
+
+		int32 total_amount_of_generations = 0;
+		from_binary << total_amount_of_generations;
+
+		int32 population_size = 0;
+		from_binary << population_size;
+
+		for (int32 generation_index = 0; generation_index < total_amount_of_generations; ++generation_index) // Iterate per generation
+		{
+			TArray<FPathSerializationData> all_paths;
+
+			for (int32 path_index = 0; path_index < population_size; ++path_index) // Iterate per path
+			{
+				// Start filling up the DeserializationData array with the deserialized data
+				FPathSerializationData deserialized_path_data;
+				from_binary << deserialized_path_data.mNodeAmount;
+
+				deserialized_path_data.mGeneticRepresentation.Reserve(deserialized_path_data.mNodeAmount);
+
+				for (int32 location_index = 0; location_index < deserialized_path_data.mNodeAmount; ++location_index) // Iterate per chromosome
+				{
+					FVector node_location;
+					from_binary << node_location;
+
+					deserialized_path_data.mGeneticRepresentation.Add(node_location);
+				}
+
+				all_paths.Add(deserialized_path_data);
+			}
+
+			mDeserializationData.Add(all_paths);
+		}
+	}
+
+	compressed_data.Empty();
+	decompressor.FlushCache();
+	from_binary.FlushCache();
+
+	decompressed_data.Empty();
+	decompressed_data.Close();
+
+	FPathSerializationData test = mDeserializationData[0][0];
 }
 
 

@@ -51,6 +51,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "GeneticPaths")
 	void RequestAnimationControlStateUpdate(const EAnimationControlState inAnimationControlState);
+
+	UFUNCTION(BlueprintCallable, Category = "GeneticPaths")
+	void RequestDeserialization();
 	
 protected:
 	virtual void GASpaceBar();

@@ -32,6 +32,7 @@ public:
 	virtual void Dispose();
 
 	void ChangeAnimationControlState(const EAnimationControlState inAnimationControlState);
+	void DeserializeData();
 
 public:
 	UPROPERTY(BlueprintReadWrite, meta = (Tooltip = "The transform component of the path manager, to be exposed to the editor."))
@@ -176,7 +177,6 @@ private:
 
 	void StopRun();
 	void SerializeData();
-	void DeserializeData();
 
 private:
 	struct FGenerationInfo
@@ -207,5 +207,8 @@ private:
 		int32 mNodeAmount;
 		TArray<FVector> mGeneticRepresentation;
 	};
-	TArray<TArray<FPathSerializationData>> mSerializationData;
+
+	using FDataBlob = TArray<TArray<FPathSerializationData>>;
+	FDataBlob mSerializationData;
+	FDataBlob mDeserializationData;
 };
