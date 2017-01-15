@@ -118,11 +118,7 @@ void APathManager::EvaluateFitness()
 		{
 			path = mPaths[i];
 
-			if (path == nullptr && GEngine != nullptr)
-			{
-				GEngine->AddOnScreenDebugMessage(-1, 10.0f, FColor::White, TEXT("Nullptr path in fitness evaluation!"));
-				continue;
-			}
+			check(path != nullptr);
 
 			// Force path to snap to terrain if possible
 			path->SnapToTerrain();
@@ -252,6 +248,14 @@ void APathManager::EvaluateFitness()
 						}
 					}
 				}
+
+				// Max length fitness
+				if (UseMaxLengthFitness && is_current_index_valid && is_previous_index_valid)
+				{
+					const float length = (genetic_representation[index] - genetic_representation[index - 1]).Size();
+					if (length > MaxEuclidianDistance)
+						path->MarkDistanceBetweenChromosomesTooLarge();
+				}
 			}
 		}
 		else
@@ -274,6 +278,8 @@ void APathManager::EvaluateFitness()
 		if (mPaths.IsValidIndex(i) && mPaths[i]->IsValidLowLevelFast())
 		{
 			path = mPaths[i];
+
+			check(path != nullptr);
 
 			// Need zero handling
 			float node_amount_blend_value = 0.0f;
@@ -337,6 +343,14 @@ void APathManager::EvaluateFitness()
 				}
 			}
 
+			// Distance between points too large?
+			float max_length_multiplier = 1.0f;
+			if (UseMaxLengthFitness)
+			{
+				if (path->GetDistanceBetweenChromosomesTooLarge())
+					max_length_multiplier = EuclidianOvershootMultiplier;
+			}
+
 			// Calculate final fitness based on the various weights and multipliers
 			const float weight_fitness = ((AmountOfNodesWeight * node_amount_blend_value) +
 											(ProximityToTargetedNodeWeight * proximity_blend_value) +
@@ -345,7 +359,7 @@ void APathManager::EvaluateFitness()
 											target_reached_fitness +
 											SlopeWeight +
 											obstacle_avoidance_weight);
-			const float weight_multiplier = obstacle_multiplier * slope_too_intense_multiplier * traveling_through_terrain_multiplier;
+			const float weight_multiplier = obstacle_multiplier * slope_too_intense_multiplier * traveling_through_terrain_multiplier * max_length_multiplier;
 			const float final_fitness = weight_fitness * weight_multiplier;
 
 			path->SetFitnessValues(final_fitness, AmountOfNodesWeight * node_amount_blend_value);
@@ -678,7 +692,7 @@ void APathManager::ColorCodePathsByFitness()
 	{
 		check(path != nullptr);
 
-		if (path->GetIsInObstacle() || path->GetSlopeTooIntense() || path->GetTravelingThroughTerrain()) 
+		if (path->GetIsInObstacle() || path->GetSlopeTooIntense() || path->GetTravelingThroughTerrain() || path->GetDistanceBetweenChromosomesTooLarge())
 		{
 			// Completely unfit paths are marked grey
 			path->SetColorCode(InvalidPathColor);

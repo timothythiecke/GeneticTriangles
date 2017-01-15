@@ -16,7 +16,8 @@ APath::APath() :
 	mCanSeeTarget(false),
 	mHasReachedTarget(false),
 	mSlopeTooIntense(false),
-	mTravelingThroughTerrain(false)
+	mTravelingThroughTerrain(false),
+	mDistanceBetweenChromosomesTooLarge(false)
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -46,7 +47,12 @@ void APath::Tick( float DeltaTime )
 	{
 		if (mGeneticRepresentation.IsValidIndex(i + 1))
 		{
-			DrawDebugLine(GetWorld(), mGeneticRepresentation[i], mGeneticRepresentation[i + 1], mColor, true, 0.1f, 0, 2.0f);
+			float width = 2.0f;
+
+			if (mIsInObstacle || mSlopeTooIntense || mTravelingThroughTerrain || mDistanceBetweenChromosomesTooLarge)
+				width = 1.0f;
+
+			DrawDebugLine(GetWorld(), mGeneticRepresentation[i], mGeneticRepresentation[i + 1], mColor, true, 0.1f, 0, width);
 		}
 	}
 }

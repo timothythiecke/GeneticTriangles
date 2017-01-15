@@ -53,6 +53,8 @@ public:
 	void MutateThroughInsertion();
 	void MutateThroughDeletion();
 
+	void SnapToTerrain();
+
 	void SetColorCode(const FColor& inColor) { mColor = inColor; }
 
 	void MarkIsInObstacle() { mIsInObstacle = true; }
@@ -72,10 +74,11 @@ public:
 
 	float GetAmountOfNodesFitness() const { return mAmountOfNodesFitness; }
 
-	void SnapToTerrain();
-
 	void AddObstacleHitMultiplierChunk(const float inChunk) { mObstacleHitMultiplierChunk += inChunk; }
 	float GetObstacleHitMultiplierChunk() const { return mObstacleHitMultiplierChunk; }
+
+	void MarkDistanceBetweenChromosomesTooLarge() { mDistanceBetweenChromosomesTooLarge = true; }
+	bool GetDistanceBetweenChromosomesTooLarge() const { return mDistanceBetweenChromosomesTooLarge; }
 
 public:
 	UPROPERTY(BlueprintReadWrite)
@@ -85,13 +88,16 @@ private:
 	TArray<FVector> mGeneticRepresentation;
 	UTextRenderComponent* mTextRenderComponent = nullptr;
 	FColor mColor;
+	
 	float mFitness;
 	float mAmountOfNodesFitness;
 	float mLength;
 	float mObstacleHitMultiplierChunk;
+	
 	bool mIsInObstacle;
 	bool mCanSeeTarget;
 	bool mHasReachedTarget;
 	bool mSlopeTooIntense;
 	bool mTravelingThroughTerrain;
+	bool mDistanceBetweenChromosomesTooLarge;
 };
