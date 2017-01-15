@@ -62,6 +62,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "GeneticPaths")
 	void RequestScrubUpdate(const float inBlendValue);
 
+	UFUNCTION(BlueprintCallable, Category = "GeneticPaths")
+	FString RequestKnowledgeOfGenerationInfo();
+
 protected:
 	virtual void GASpaceBar();
 	virtual void GAFitness();

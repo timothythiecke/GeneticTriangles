@@ -758,6 +758,7 @@ void APathManager::ColorCodePathsByFitness()
 
 void APathManager::LogGenerationInfo()
 {
+	/*
 	if (GEngine != nullptr)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Black, TEXT("\n\n"));
@@ -772,6 +773,7 @@ void APathManager::LogGenerationInfo()
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Amount of reproducing crossovers: ") + FString::FromInt(mGenerationInfo.mCrossoverAmount));
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("Generation #") + FString::FromInt(mGenerationInfo.mGenerationNumber));
 	}
+	*/
 }
 
 
@@ -1082,4 +1084,40 @@ int32 APathManager::GetGenerationCount() const
 		return mDeserializedDataScrubIndex;
 	else
 		return GenerationCount;
+}
+
+
+
+FString APathManager::GetGenerationInfoAsString()
+{
+	mStringifiedGenerationInfo.Empty(512);
+	
+	mStringifiedGenerationInfo.Append(TEXT("Generation #")).AppendInt(mGenerationInfo.mGenerationNumber);
+	mStringifiedGenerationInfo.AppendChar('\n');
+
+	mStringifiedGenerationInfo.Append(TEXT("Reproducing crossovers: ")).AppendInt(mGenerationInfo.mCrossoverAmount);
+	mStringifiedGenerationInfo.AppendChar('\n');
+
+	mStringifiedGenerationInfo.Append(TEXT("Translation mutations: ")).AppendInt(mGenerationInfo.mAmountOfTranslationMutations);
+	mStringifiedGenerationInfo.AppendChar('\n');
+
+	mStringifiedGenerationInfo.Append(TEXT("Insertion mutations: ")).AppendInt(mGenerationInfo.mAmountOfInsertionMutations);
+	mStringifiedGenerationInfo.AppendChar('\n');
+
+	mStringifiedGenerationInfo.Append(TEXT("Deletion mutations: ")).AppendInt(mGenerationInfo.mAmountOfDeletionMutations);
+	mStringifiedGenerationInfo.AppendChar('\n');
+
+	mStringifiedGenerationInfo.Append(TEXT("Average fitness: ")).AppendInt(mGenerationInfo.mAverageFitness);
+	mStringifiedGenerationInfo.AppendChar('\n');
+
+	mStringifiedGenerationInfo.Append(TEXT("Maximum fitness: ")).AppendInt(mGenerationInfo.mMaximumFitness);
+	mStringifiedGenerationInfo.AppendChar('\n');
+
+	mStringifiedGenerationInfo.Append(TEXT("Fitness factor: ")).Append(FString::SanitizeFloat(mGenerationInfo.mFitnessFactor));
+	mStringifiedGenerationInfo.AppendChar('\n');
+
+	mStringifiedGenerationInfo.Append(TEXT("Average amount of nodes: ")).Append(FString::SanitizeFloat(mGenerationInfo.mAverageAmountOfNodes));
+	mStringifiedGenerationInfo.AppendChar('\n');
+
+	return mStringifiedGenerationInfo;
 }

@@ -29,6 +29,8 @@ void AGeneticTrianglesController::BeginPlay()
 		InputComponent->BindAction("GAFitness", EInputEvent::IE_Pressed, this, &AGeneticTrianglesController::GAFitness);
 		// ...
 	}
+
+	bShowMouseCursor = true;
 }
 
 void AGeneticTrianglesController::GASpaceBar()
@@ -246,3 +248,12 @@ void AGeneticTrianglesController::FindPathManager()
 }
 
 
+
+FString AGeneticTrianglesController::RequestKnowledgeOfGenerationInfo()
+{
+	FindPathManager();
+
+	check(mPathManager != nullptr);
+
+	return mPathManager->GetGenerationInfoAsString();
+}

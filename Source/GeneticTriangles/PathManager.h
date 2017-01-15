@@ -35,6 +35,7 @@ public:
 	void DeserializeData();
 	void HandleScrubUpdate(const float inScrubValue);
 	int32 GetGenerationCount() const;
+	FString GetGenerationInfoAsString();
 
 public:
 	UPROPERTY(BlueprintReadWrite, meta = (Tooltip = "The transform component of the path manager, to be exposed to the editor."))
@@ -198,6 +199,7 @@ private:
 	};
 
 	FGenerationInfo mGenerationInfo;
+	FString mStringifiedGenerationInfo;
 
 	TArray<APath*> mPaths;
 	TArray<APath*> mMatingPaths;
