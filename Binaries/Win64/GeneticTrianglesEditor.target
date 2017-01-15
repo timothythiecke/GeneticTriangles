@@ -2,7 +2,7 @@
 	"TargetName" : "GeneticTrianglesEditor",
 	"Platform" : "Win64",
 	"Configuration" : "Development",
-	"BuildId" : "62aec169-2231-4811-a203-2637f3d30976",
+	"BuildId" : "521dca69-0bfd-4c96-882a-08c01f27402a",
 	"Version" : 
 	{
 		"MajorVersion" : 4,
@@ -16,15 +16,15 @@
 	"BuildProducts" :
 	[
 		{
-			"Path" : "$(ProjectDir)/Binaries/Win64/UE4Editor-GeneticTriangles-6261.dll",
+			"Path" : "$(ProjectDir)/Binaries/Win64/UE4Editor-GeneticTriangles-3973.dll",
 			"Type" : "DynamicLibrary"
 		},
 		{
-			"Path" : "$(ProjectDir)/Binaries/Win64/UE4Editor-GeneticTriangles-6261.pdb",
+			"Path" : "$(ProjectDir)/Binaries/Win64/UE4Editor-GeneticTriangles-3973.pdb",
 			"Type" : "SymbolFile"
 		},
 		{
-			"Path" : "$(ProjectDir)/Intermediate/Build/Win64/UE4Editor/Development/UE4Editor-GeneticTriangles-6261.lib",
+			"Path" : "$(ProjectDir)/Intermediate/Build/Win64/UE4Editor/Development/UE4Editor-GeneticTriangles-3973.lib",
 			"Type" : "ImportLibrary"
 		}
 	],

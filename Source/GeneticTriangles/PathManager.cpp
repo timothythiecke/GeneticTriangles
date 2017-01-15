@@ -4,6 +4,7 @@
 #include "PathManager.h"
 
 #include "Path.h"
+#include "FileManager.h"
 
 // Sets default values
 APathManager::APathManager()
@@ -793,7 +794,7 @@ void APathManager::ChangeAnimationControlState(const EAnimationControlState inAn
 void APathManager::StopRun()
 {
 	// @TODO: Serialize data
-
+	SerializeData();
 	
 	// Reset data
 	GenerationCount = 0;
@@ -817,4 +818,32 @@ void APathManager::StopRun()
 	// Stop generation cycle
 	mPreviousAnimationControlState = EAnimationControlState::Limbo;
 	mNextAnimationControlState = EAnimationControlState::Limbo;
+}
+
+
+
+void APathManager::SerializeData()
+{
+	IFileManager& file_manager = IFileManager::Get();
+
+	FBufferArchive archive;
+	{
+		archive << mTimer;
+	}
+	
+	TArray<uint8> compressed_data;
+	FArchiveSaveCompressedProxy compressor = FArchiveSaveCompressedProxy(compressed_data, ECompressionFlags::COMPRESS_ZLIB);
+
+	compressor << archive;
+	compressor.Flush();
+
+	const FString file_path("D:/Output/Paths.ga");
+	FFileHelper::SaveArrayToFile(compressed_data, *file_path);
+
+	compressor.FlushCache();
+	compressed_data.Empty();
+	
+	archive.FlushCache();
+	archive.Empty();
+	archive.Close();
 }

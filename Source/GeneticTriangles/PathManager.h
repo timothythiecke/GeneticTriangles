@@ -173,6 +173,7 @@ private:
 	void LogGenerationInfo();
 
 	void StopRun();
+	void SerializeData();
 
 private:
 	struct FGenerationInfo
