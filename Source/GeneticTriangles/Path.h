@@ -53,6 +53,7 @@ public:
 	void SnapToTerrain();
 
 	void SetColorCode(const FColor& inColor) { mColor = inColor; }
+	FColor GetColorCode() const { return mColor; }
 
 	void MarkIsInObstacle() { mIsInObstacle = true; }
 	bool GetIsInObstacle() const { return mIsInObstacle; }

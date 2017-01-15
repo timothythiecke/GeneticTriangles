@@ -862,6 +862,8 @@ void APathManager::SerializeData()
 				{
 					archive << mSerializationData[i][j].mGeneticRepresentation[k];
 				}
+
+				archive << mSerializationData[i][j].mColor;
 			}
 		}
 	}
@@ -943,6 +945,8 @@ void APathManager::DeserializeData()
 					deserialized_path_data.mGeneticRepresentation.Add(node_location);
 				}
 
+				from_binary << deserialized_path_data.mColor;
+
 				all_paths.Add(deserialized_path_data);
 			}
 
@@ -988,6 +992,8 @@ void APathManager::AddGenerationInfoToSerializableData()
 		
 		path_serialization_data.mGeneticRepresentation.Reserve(path->GetAmountOfNodes());
 		path_serialization_data.mGeneticRepresentation = path->GetGeneticRepresentation();
+
+		path_serialization_data.mColor = path->GetColorCode();
 
 		// Then add it to the serialization array
 		serializable_data_of_paths.Add(path_serialization_data);
@@ -1041,6 +1047,7 @@ void APathManager::DeserializeInitialization()
 		check(path != nullptr);
 		
 		path->SetGeneticRepresentation(mDeserializationData[mDeserializedDataScrubIndex][i].mGeneticRepresentation);
+		path->SetColorCode(mDeserializationData[mDeserializedDataScrubIndex][i].mColor);
 
 		mPaths.Add(path);
 	}
@@ -1060,6 +1067,9 @@ void APathManager::UpdateScrub()
 		check(path != nullptr);
 
 		if (mDeserializationData.IsValidIndex(mDeserializedDataScrubIndex) && mDeserializationData[mDeserializedDataScrubIndex].IsValidIndex(i))
+		{
 			path->SetGeneticRepresentation(mDeserializationData[mDeserializedDataScrubIndex][i].mGeneticRepresentation);
+			path->SetColorCode(mDeserializationData[mDeserializedDataScrubIndex][i].mColor);
+		}
 	}
 }

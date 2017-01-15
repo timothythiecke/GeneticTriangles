@@ -210,6 +210,7 @@ private:
 	{
 		int32 mNodeAmount;
 		TArray<FVector> mGeneticRepresentation;
+		FColor mColor;
 	};
 
 	using FDataBlob = TArray<TArray<FPathSerializationData>>;
