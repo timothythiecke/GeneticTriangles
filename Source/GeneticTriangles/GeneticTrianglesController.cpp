@@ -182,23 +182,7 @@ void AGeneticTrianglesController::SetMutationRateBalancing(const bool UsesMutati
 
 void AGeneticTrianglesController::RequestAnimationControlStateUpdate(const EAnimationControlState inAnimationControlState)
 {
-	if (mPathManager == nullptr)
-	{
-		for (TActorIterator<AActor> actor_iterator(GetWorld()); actor_iterator; ++actor_iterator)
-		{
-			APathManager* ptr = Cast<APathManager>(*actor_iterator);
-
-			if (ptr != nullptr)
-			{
-				mPathManager = ptr;
-				break;
-			}
-		}
-	}
-	else
-	{
-		check(mPathManager->IsValidLowLevel());
-	}
+	FindPathManager();
 
 	check(mPathManager != nullptr);
 
@@ -208,6 +192,28 @@ void AGeneticTrianglesController::RequestAnimationControlStateUpdate(const EAnim
 
 
 void AGeneticTrianglesController::RequestDeserialization()
+{
+	FindPathManager();
+
+	check(mPathManager != nullptr);
+
+	mPathManager->DeserializeData();
+}
+
+
+
+int32 AGeneticTrianglesController::RequestKnowledgeOfGenerationCount()
+{
+	FindPathManager();
+
+	check(mPathManager != nullptr);
+
+	return mPathManager->GenerationCount;
+}
+
+
+
+void AGeneticTrianglesController::FindPathManager()
 {
 	if (mPathManager == nullptr)
 	{
@@ -226,8 +232,4 @@ void AGeneticTrianglesController::RequestDeserialization()
 	{
 		check(mPathManager->IsValidLowLevel());
 	}
-
-	check(mPathManager != nullptr);
-
-	mPathManager->DeserializeData();
 }

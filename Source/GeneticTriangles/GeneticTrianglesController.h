@@ -54,12 +54,16 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "GeneticPaths")
 	void RequestDeserialization();
+
+	UFUNCTION(BlueprintCallable, Category = "GeneticPaths")
+	int32 RequestKnowledgeOfGenerationCount();
 	
 protected:
 	virtual void GASpaceBar();
 	virtual void GAFitness();
 
 	virtual void FindTriangleManager();
+	virtual void FindPathManager();
 
 private:
 	ATriangleManager* mTriangleManager = nullptr;
