@@ -208,7 +208,7 @@ int32 AGeneticTrianglesController::RequestKnowledgeOfGenerationCount()
 
 	check(mPathManager != nullptr);
 
-	return mPathManager->GenerationCount;
+	return mPathManager->GetGenerationCount();
 }
 
 

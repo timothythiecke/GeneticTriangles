@@ -1073,3 +1073,13 @@ void APathManager::UpdateScrub()
 		}
 	}
 }
+
+
+
+int32 APathManager::GetGenerationCount() const
+{
+	if (mDeserializationData.Num() > 0)
+		return mDeserializedDataScrubIndex;
+	else
+		return GenerationCount;
+}

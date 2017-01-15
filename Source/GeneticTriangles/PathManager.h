@@ -34,6 +34,7 @@ public:
 	void ChangeAnimationControlState(const EAnimationControlState inAnimationControlState);
 	void DeserializeData();
 	void HandleScrubUpdate(const float inScrubValue);
+	int32 GetGenerationCount() const;
 
 public:
 	UPROPERTY(BlueprintReadWrite, meta = (Tooltip = "The transform component of the path manager, to be exposed to the editor."))
