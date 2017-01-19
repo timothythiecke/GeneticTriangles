@@ -216,7 +216,13 @@ private:
 		FColor mColor;
 	};
 
-	using FDataBlob = TArray<TArray<FPathSerializationData>>;
+	struct FGenerationSerializationData
+	{
+		TArray<FPathSerializationData> mPathSerializationData;
+		FGenerationInfo mGenerationInfo;
+	};
+
+	using FDataBlob = TArray<FGenerationSerializationData>;
 	FDataBlob mSerializationData;
 	FDataBlob mDeserializationData;
 

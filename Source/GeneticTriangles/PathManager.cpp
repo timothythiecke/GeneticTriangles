@@ -856,17 +856,27 @@ void APathManager::SerializeData()
 		// Write paths to the archive
 		for (int i = 0; i < mSerializationData.Num(); ++i) // Iterates per generation
 		{
-			for (int j = 0; j < mSerializationData[i].Num(); ++j) // Iterates per path
+			for (int j = 0; j < mSerializationData[i].mPathSerializationData.Num(); ++j) // Iterates per path
 			{
-				archive << mSerializationData[i][j].mNodeAmount;
+				archive << mSerializationData[i].mPathSerializationData[j].mNodeAmount;
 
-				for (int k = 0; k < mSerializationData[i][j].mGeneticRepresentation.Num(); ++k)
+				for (int k = 0; k < mSerializationData[i].mPathSerializationData[j].mGeneticRepresentation.Num(); ++k)
 				{
-					archive << mSerializationData[i][j].mGeneticRepresentation[k];
+					archive << mSerializationData[i].mPathSerializationData[j].mGeneticRepresentation[k];
 				}
 
-				archive << mSerializationData[i][j].mColor;
+				archive << mSerializationData[i].mPathSerializationData[j].mColor;
 			}
+
+			archive << mSerializationData[i].mGenerationInfo.mAmountOfDeletionMutations;
+			archive << mSerializationData[i].mGenerationInfo.mAmountOfInsertionMutations;
+			archive << mSerializationData[i].mGenerationInfo.mAmountOfTranslationMutations;
+			archive << mSerializationData[i].mGenerationInfo.mAverageAmountOfNodes;
+			archive << mSerializationData[i].mGenerationInfo.mAverageFitness;
+			archive << mSerializationData[i].mGenerationInfo.mCrossoverAmount;
+			archive << mSerializationData[i].mGenerationInfo.mFitnessFactor;
+			archive << mSerializationData[i].mGenerationInfo.mGenerationNumber;
+			archive << mSerializationData[i].mGenerationInfo.mMaximumFitness;
 		}
 	}
 	
@@ -929,7 +939,9 @@ void APathManager::DeserializeData()
 
 		for (int32 generation_index = 0; generation_index < total_amount_of_generations; ++generation_index) // Iterate per generation
 		{
-			TArray<FPathSerializationData> all_paths;
+			FGenerationSerializationData generation_data;
+
+			TArray<FPathSerializationData>& all_paths = generation_data.mPathSerializationData;
 
 			for (int32 path_index = 0; path_index < population_size; ++path_index) // Iterate per path
 			{
@@ -952,7 +964,17 @@ void APathManager::DeserializeData()
 				all_paths.Add(deserialized_path_data);
 			}
 
-			mDeserializationData.Add(all_paths);
+			from_binary << generation_data.mGenerationInfo.mAmountOfDeletionMutations;
+			from_binary << generation_data.mGenerationInfo.mAmountOfInsertionMutations;
+			from_binary << generation_data.mGenerationInfo.mAmountOfTranslationMutations;
+			from_binary << generation_data.mGenerationInfo.mAverageAmountOfNodes;
+			from_binary << generation_data.mGenerationInfo.mAverageFitness;
+			from_binary << generation_data.mGenerationInfo.mCrossoverAmount;
+			from_binary << generation_data.mGenerationInfo.mFitnessFactor;
+			from_binary << generation_data.mGenerationInfo.mGenerationNumber;
+			from_binary << generation_data.mGenerationInfo.mMaximumFitness;
+
+			mDeserializationData.Add(generation_data);
 		}
 	}
 
@@ -964,7 +986,7 @@ void APathManager::DeserializeData()
 	decompressed_data.Close();
 
 	// If the following line breaks the application, then something went wrong during the (de)serialization process
-	FPathSerializationData test = mDeserializationData[0][0];
+	FPathSerializationData test = mDeserializationData[0].mPathSerializationData[0];
 
 	PostDeserialize();
 }
@@ -976,9 +998,12 @@ void APathManager::DeserializeData()
 */
 void APathManager::AddGenerationInfoToSerializableData()
 {
+	FGenerationSerializationData data_to_add;
+	data_to_add.mGenerationInfo = mGenerationInfo;
+
 	// Create an array of path serialization data
 	// Every entry corresponds to a path
-	TArray<FPathSerializationData> serializable_data_of_paths;
+	TArray<FPathSerializationData>& serializable_data_of_paths = data_to_add.mPathSerializationData;
 	serializable_data_of_paths.Reserve(PopulationCount);
 
 	// Add each path
@@ -1002,7 +1027,7 @@ void APathManager::AddGenerationInfoToSerializableData()
 	}
 
 	// At the end, add the data to the data which will be serialized
-	mSerializationData.Add(serializable_data_of_paths);
+	mSerializationData.Add(data_to_add);
 }
 
 
@@ -1048,8 +1073,8 @@ void APathManager::DeserializeInitialization()
 
 		check(path != nullptr);
 		
-		path->SetGeneticRepresentation(mDeserializationData[mDeserializedDataScrubIndex][i].mGeneticRepresentation);
-		path->SetColorCode(mDeserializationData[mDeserializedDataScrubIndex][i].mColor);
+		path->SetGeneticRepresentation(mDeserializationData[mDeserializedDataScrubIndex].mPathSerializationData[i].mGeneticRepresentation);
+		path->SetColorCode(mDeserializationData[mDeserializedDataScrubIndex].mPathSerializationData[i].mColor);
 
 		mPaths.Add(path);
 	}
@@ -1062,17 +1087,22 @@ void APathManager::DeserializeInitialization()
 */
 void APathManager::UpdateScrub()
 {
-	for (int32 i = 0; i < mPaths.Num(); ++i)
+	if (mDeserializationData.IsValidIndex(mDeserializedDataScrubIndex))
 	{
-		APath* path = mPaths[i];
-
-		check(path != nullptr);
-
-		if (mDeserializationData.IsValidIndex(mDeserializedDataScrubIndex) && mDeserializationData[mDeserializedDataScrubIndex].IsValidIndex(i))
+		for (int32 i = 0; i < mPaths.Num(); ++i)
 		{
-			path->SetGeneticRepresentation(mDeserializationData[mDeserializedDataScrubIndex][i].mGeneticRepresentation);
-			path->SetColorCode(mDeserializationData[mDeserializedDataScrubIndex][i].mColor);
+			APath* path = mPaths[i];
+
+			check(path != nullptr);
+
+			if (mDeserializationData[mDeserializedDataScrubIndex].mPathSerializationData.IsValidIndex(i))
+			{
+				path->SetGeneticRepresentation(mDeserializationData[mDeserializedDataScrubIndex].mPathSerializationData[i].mGeneticRepresentation);
+				path->SetColorCode(mDeserializationData[mDeserializedDataScrubIndex].mPathSerializationData[i].mColor);
+			}
 		}
+
+		mGenerationInfo = mDeserializationData[mDeserializedDataScrubIndex].mGenerationInfo;
 	}
 }
 
