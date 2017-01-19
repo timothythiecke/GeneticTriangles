@@ -154,6 +154,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ObstacleAvoidance", meta = (ToolTip = "Determines the way rays will be traced from a chromsome"))
 	EObstacleTraceBehaviour TraceBehaviour = EObstacleTraceBehaviour::WindDirectionTracing;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ObstacleAvoidance", meta = (ToolTip = "How many points should be generated on the circle around the points"))
+	int32 AmountOfCyclicPoints = 8;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ObstacleAvoidance", meta = (ToolTip = "The distance or radius in euclidian space between a chromosome and the end point"))
 	float TraceDistance = 20.0f;
 

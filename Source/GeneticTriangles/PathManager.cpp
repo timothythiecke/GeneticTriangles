@@ -272,7 +272,15 @@ void APathManager::EvaluateFitness()
 						}
 						else
 						{
-							//@TODO
+							trace_ends.Reserve(AmountOfCyclicPoints);
+
+							float degree = 0.0f;
+
+							for (int32 n = 0; n < AmountOfCyclicPoints; ++n)
+							{
+								trace_ends.Add(FVector(FMath::Sin(FMath::DegreesToRadians(degree)), FMath::Cos(FMath::DegreesToRadians(degree)), 0.0f) * TraceDistance);
+								degree += 360 / (float)(AmountOfCyclicPoints);
+							}
 						}
 
 						FVector start = genetic_representation[index];
@@ -397,7 +405,7 @@ void APathManager::EvaluateFitness()
 											target_reached_fitness +
 											SlopeWeight +
 											obstacle_avoidance_weight);
-			const float weight_multiplier = obstacle_multiplier * slope_too_intense_multiplier * traveling_through_terrain_multiplier * max_length_multiplier;
+			const float weight_multiplier = obstacle_multiplier * slope_too_intense_multiplier * traveling_through_terrain_multiplier * max_length_multiplier * obstacle_avoidance_multiplier;
 			const float final_fitness = weight_fitness * weight_multiplier;
 
 			path->SetFitnessValues(final_fitness, AmountOfNodesWeight * node_amount_blend_value);
@@ -758,8 +766,8 @@ void APathManager::ColorCodePathsByFitness()
 
 void APathManager::LogGenerationInfo()
 {
-	/*
-	if (GEngine != nullptr)
+	// AutoRun > map has no UI support
+	if (AutoRun && GEngine != nullptr)
 	{
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Black, TEXT("\n\n"));
 
@@ -773,7 +781,6 @@ void APathManager::LogGenerationInfo()
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("Amount of reproducing crossovers: ") + FString::FromInt(mGenerationInfo.mCrossoverAmount));
 		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("Generation #") + FString::FromInt(mGenerationInfo.mGenerationNumber));
 	}
-	*/
 }
 
 
