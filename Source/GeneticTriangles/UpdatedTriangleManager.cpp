@@ -18,6 +18,8 @@ void AUpdatedTriangleManager::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Auto initializer
+	GetWorld()->GetTimerManager().SetTimer(mTimerHandle, this, &AUpdatedTriangleManager::Initialize, 1.0f, false);
 }
 
 // Called every frame

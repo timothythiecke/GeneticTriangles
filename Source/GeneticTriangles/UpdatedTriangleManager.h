@@ -92,4 +92,6 @@ private:
 	TArray<ATriangle*> mMatingTriangles;
 
 	float mConstTimer = 1.0f;
+
+	FTimerHandle mTimerHandle;
 };
