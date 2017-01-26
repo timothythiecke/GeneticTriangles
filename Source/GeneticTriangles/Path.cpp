@@ -6,18 +6,7 @@
 #include "PathManager.h"
 
 // Sets default values
-APath::APath() :
-	SceneComponent(nullptr),
-	mFitness(0.0f),
-	mLength(0.0f),
-	mAmountOfNodesFitness(0.0f),
-	mObstacleHitMultiplierChunk(0.0f),
-	mIsInObstacle(false),
-	mCanSeeTarget(false),
-	mHasReachedTarget(false),
-	mSlopeTooIntense(false),
-	mTravelingThroughTerrain(false),
-	mDistanceBetweenChromosomesTooLarge(false)
+APath::APath()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -49,8 +38,8 @@ void APath::Tick( float DeltaTime )
 		{
 			float width = 2.0f;
 
-			if (mIsInObstacle || mSlopeTooIntense || mTravelingThroughTerrain || mDistanceBetweenChromosomesTooLarge)
-				width = 1.0f;
+			if (mIsInObstacle || mSlopeTooIntense || mTravelingThroughTerrain || mDistanceBetweenChromosomesTooLarge || !mFittestSolution)
+				width = 0.5f;
 
 			DrawDebugLine(GetWorld(), mGeneticRepresentation[i], mGeneticRepresentation[i + 1], mColor, true, 0.1f, 0, width);
 		}

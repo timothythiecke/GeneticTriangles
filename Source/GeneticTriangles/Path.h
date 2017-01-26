@@ -78,24 +78,28 @@ public:
 	void MarkDistanceBetweenChromosomesTooLarge() { mDistanceBetweenChromosomesTooLarge = true; }
 	bool GetDistanceBetweenChromosomesTooLarge() const { return mDistanceBetweenChromosomesTooLarge; }
 
+	void MarkFittestSolution() { mFittestSolution = true; }
+	bool GetFittestSolution() const { return mFittestSolution; }
+
 public:
 	UPROPERTY(BlueprintReadWrite)
-	USceneComponent* SceneComponent;
+	USceneComponent* SceneComponent = nullptr;
 	
 private:
 	TArray<FVector> mGeneticRepresentation;
 	UTextRenderComponent* mTextRenderComponent = nullptr;
-	FColor mColor;
+	FColor mColor = FColor::Black;
 	
-	float mFitness;
-	float mAmountOfNodesFitness;
-	float mLength;
-	float mObstacleHitMultiplierChunk;
+	float mFitness = 0.0f;
+	float mAmountOfNodesFitness = 0.0f;
+	float mLength = 0.0f;
+	float mObstacleHitMultiplierChunk = 0.0f;
 	
-	bool mIsInObstacle;
-	bool mCanSeeTarget;
-	bool mHasReachedTarget;
-	bool mSlopeTooIntense;
-	bool mTravelingThroughTerrain;
-	bool mDistanceBetweenChromosomesTooLarge;
+	bool mIsInObstacle = false;
+	bool mCanSeeTarget = false;
+	bool mHasReachedTarget = false;
+	bool mSlopeTooIntense = false;
+	bool mTravelingThroughTerrain = false;
+	bool mDistanceBetweenChromosomesTooLarge = false;
+	bool mFittestSolution = false;
 };

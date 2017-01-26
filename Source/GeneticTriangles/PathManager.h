@@ -217,6 +217,7 @@ private:
 		int32 mNodeAmount;
 		TArray<FVector> mGeneticRepresentation;
 		FColor mColor;
+		bool mFittest;
 	};
 
 	struct FGenerationSerializationData

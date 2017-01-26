@@ -307,9 +307,6 @@ void APathManager::EvaluateFitness()
 		else
 			UE_LOG(LogTemp, Warning, TEXT("APathManager::EvaluateFitness >> mPaths contains an invalid APath* at index %d"), i);
 	}
-	
-	// TODO: Currently should ALWAYS result in 5
-
 
 	// ///////////////////////////////
 	// 2. CALCULATE AND ASSIGN FITNESS
@@ -317,6 +314,7 @@ void APathManager::EvaluateFitness()
 	mTotalFitness = 0.0f;
 	int32 amount_of_nodes = 0;
 	int32 offenders = 0;
+	float highest_fitness = 0.0f;
 	for (int32 i = 0; i < mPaths.Num(); ++i)
 	{
 		APath* path = nullptr;
@@ -410,6 +408,10 @@ void APathManager::EvaluateFitness()
 
 			path->SetFitnessValues(final_fitness, AmountOfNodesWeight * node_amount_blend_value);
 			
+			// Caching
+			if (final_fitness > highest_fitness)
+				highest_fitness = final_fitness;
+			
 			mTotalFitness += final_fitness;
 			amount_of_nodes += path->GetGeneticRepresentation().Num();
 		}
@@ -417,7 +419,14 @@ void APathManager::EvaluateFitness()
 			UE_LOG(LogTemp, Warning, TEXT("APathManager::EvaluateFitness >> mPaths contains an invalid APath* at index %d"), i);
 	}
 
-	//UE_LOG(LogTemp, Warning, TEXT("Offenders: %d"), offenders);
+	for (APath* path : mPaths)
+	{
+		check(path != nullptr);
+
+		if (path->GetFitness() == highest_fitness)
+			path->MarkFittestSolution();
+	}
+
 
 	AverageFitness = mTotalFitness / mPaths.Num();
 	
@@ -754,9 +763,9 @@ void APathManager::ColorCodePathsByFitness()
 
 			FColor blended;
 			blended.A = 255;
-			blended.R = FMath::Lerp(red.R, green.R, blend_value * 255);
-			blended.G = FMath::Lerp(red.G, green.G, blend_value * 255);
-			blended.B = FMath::Lerp(red.B, green.B, blend_value * 255);
+			blended.R = FMath::Lerp(red.R, green.R, 1.0f - blend_value * 255);
+			blended.G = FMath::Lerp(red.G, green.G, 1.0f - blend_value * 255);
+			blended.B = 0;
 
 			path->SetColorCode(blended);
 		}
@@ -873,6 +882,7 @@ void APathManager::SerializeData()
 				}
 
 				archive << mSerializationData[i].mPathSerializationData[j].mColor;
+				archive << mSerializationData[i].mPathSerializationData[j].mFittest;
 			}
 
 			archive << mSerializationData[i].mGenerationInfo.mAmountOfDeletionMutations;
@@ -967,6 +977,7 @@ void APathManager::DeserializeData()
 				}
 
 				from_binary << deserialized_path_data.mColor;
+				from_binary << deserialized_path_data.mFittest;
 
 				all_paths.Add(deserialized_path_data);
 			}
@@ -1029,6 +1040,8 @@ void APathManager::AddGenerationInfoToSerializableData()
 
 		path_serialization_data.mColor = path->GetColorCode();
 
+		path_serialization_data.mFittest = path->GetFittestSolution();
+
 		// Then add it to the serialization array
 		serializable_data_of_paths.Add(path_serialization_data);
 	}
@@ -1082,6 +1095,10 @@ void APathManager::DeserializeInitialization()
 		
 		path->SetGeneticRepresentation(mDeserializationData[mDeserializedDataScrubIndex].mPathSerializationData[i].mGeneticRepresentation);
 		path->SetColorCode(mDeserializationData[mDeserializedDataScrubIndex].mPathSerializationData[i].mColor);
+		
+		const bool is_fittest = mDeserializationData[mDeserializedDataScrubIndex].mPathSerializationData[i].mFittest;
+		if (is_fittest)
+			path->MarkFittestSolution();
 
 		mPaths.Add(path);
 	}
@@ -1106,6 +1123,10 @@ void APathManager::UpdateScrub()
 			{
 				path->SetGeneticRepresentation(mDeserializationData[mDeserializedDataScrubIndex].mPathSerializationData[i].mGeneticRepresentation);
 				path->SetColorCode(mDeserializationData[mDeserializedDataScrubIndex].mPathSerializationData[i].mColor);
+
+				const bool is_fittest = mDeserializationData[mDeserializedDataScrubIndex].mPathSerializationData[i].mFittest;
+				if (is_fittest)
+					path->MarkFittestSolution();
 			}
 		}
 
